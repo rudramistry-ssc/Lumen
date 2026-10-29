@@ -12,7 +12,8 @@ docker compose up --build
 ```
 
 - API: http://localhost:8000 (docs at `/docs`)
-- AI service: internal only at `http://ai:8000`, built from `../ai-service`
+- AI service: internal only at `http://ai:8000`, built from `../ocr`
+- UI: served by the API at http://localhost:8000 (static files from `../frontend`, mounted via `FRONTEND_DIR`)
 - Data: named volume `appdata` → `/data` (sqlite + mp3s survive restarts)
 
 If the AI service isn't containerised yet, remove the `ai` service and

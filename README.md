@@ -13,19 +13,20 @@ Turn a picture of text into readable text (and, later, speech). The web frontend
 Two small web services, each in its own Docker container:
 
 ```
-Browser / Frontend
-        │
+Browser
+        │  loads the UI from /  and calls /v1 on the same origin
         ▼
 ┌──────────────────┐      ┌──────────────────┐
 │  Backend  (api)  │ ───▶ │   OCR service    │
 │  backend/        │      │   ocr/           │
 │  port 8000       │      │   internal only  │
 └──────────────────┘      └──────────────────┘
- sessions, uploads,        reads text from images
- database (SQLite)         with Tesseract (English + French)
+ serves frontend/ at /,    reads text from images
+ sessions, uploads,        with Tesseract (English + French)
+ database (SQLite)
 ```
 
-- **Backend** (`backend/`): the only service the frontend talks to. It creates sessions, checks uploads, saves results, and asks the OCR service to do the reading.
+- **Backend** (`backend/`): the only service the frontend talks to. It creates sessions, checks uploads, saves results, and asks the OCR service to do the reading. It also serves the static UI from `frontend/` at `/`, so the browser and the API share one origin and no CORS setup is needed.
 - **OCR service** (`ocr/`): a small wrapper around the `signspeak_ocr` package. It takes an image and returns the text and detected language. It is not exposed outside Docker.
 
 ## Start the project
@@ -37,19 +38,30 @@ cd backend
 docker compose up --build
 ```
 
-- API: http://localhost:8000
+- App (UI + API): http://localhost:8000
 - Interactive API docs: http://localhost:8000/docs
 
 Stop it with `Ctrl+C`. To also wipe saved data: `docker compose down -v`.
 
-## Run the frontend
+## Open the app
+
+With the stack running, open http://localhost:8000 — the backend serves the UI,
+so there is nothing else to start. The top bar shows **Backend connected** when
+the API answers. Chat is wired but returns `502` until the AI service implements
+`/v1/reply` (see [frontend/API_CONTRACT.md](frontend/API_CONTRACT.md)).
+
+## Working on the UI alone (optional)
+
+For UI-only work you can skip Docker and serve `frontend/` with Python:
 
 ```bash
 cd frontend
 python3 -m http.server 5500
 ```
 
-Open http://localhost:5500. It runs in **demo mode** with fake responses and is not connected to the backend yet. See [frontend/README.md](frontend/README.md#current-status-demo-mode) for what's needed to connect them.
+Open http://localhost:5500. Set `API_BASE_URL: "http://127.0.0.1:8000"` in
+`frontend/config.js` to reach a running API, or `USE_MOCK: true` to use fake
+responses. See [frontend/README.md](frontend/README.md).
 
 ## Working endpoints
 
