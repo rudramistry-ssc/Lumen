@@ -70,6 +70,13 @@
     try { await API.health(); backendState = "ok"; } catch (_) { backendState = "down"; }
     renderStatus();
   }
+  // fetch() throws TypeError when the server can't be reached at all; other
+  // errors carry the backend's reason ("502: AI service error ..."), shown small.
+  function errorText(err, key) {
+    if (cfg.USE_MOCK) return t(key);
+    if (err instanceof TypeError) { backendState = "down"; renderStatus(); return t("errOffline"); }
+    return `${t(key)}\n(${err.message})`;
+  }
 
   // ---------- image upload ----------
   const dz = $("dropzone");
@@ -134,7 +141,7 @@
       console.error(err);
       stopStages(true);
       setExtractState("empty");
-      showExtractError(t("errExtract"));
+      showExtractError(errorText(err, "errExtract"));
     }
     applyI18n();
   }
@@ -339,7 +346,7 @@
       console.error(err);
       pending.classList.remove("is-pending");
       pending.classList.add("is-error");
-      pending.querySelector(".msg-body").textContent = t("errChat");
+      pending.querySelector(".msg-body").textContent = errorText(err, "errChat");
     } finally {
       state.busy = false;
       $("send-btn").disabled = false;

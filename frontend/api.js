@@ -14,31 +14,42 @@
     return res.json();
   }
 
-  // ---------- real backend ----------
+  // ---------- real backend (backend/README.md) ----------
+  // The UI makes its own short session id; the backend makes its own on
+  // POST /v1/sessions. We create one backend session per UI session, lazily.
+  const backendSessions = {};
+  async function backendSession(uiSessionId) {
+    if (!backendSessions[uiSessionId]) {
+      backendSessions[uiSessionId] = request("/v1/sessions", { method: "POST" })
+        .then((s) => s.session_id)
+        .catch((err) => { delete backendSessions[uiSessionId]; throw err; });
+    }
+    return backendSessions[uiSessionId];
+  }
+  const LANGS = ["en", "fr", "mixed"];
+
   const real = {
-    health: () => request("/api/health"),
+    health: () => request("/healthz"),
 
     // -> { text, language: "en"|"fr"|"mixed", confidence?: 0..1 }
-    extract(file, sessionId) {
+    async extract(file, sessionId) {
+      const id = await backendSession(sessionId);
       const form = new FormData();
-      form.append("image", file);
-      form.append("session_id", sessionId);
-      return request("/api/extract", { method: "POST", body: form });
+      form.append("file", file, file.name || "photo.png");
+      const res = await request(`/v1/sessions/${id}/images`, { method: "POST", body: form });
+      // OCR says "" when it can't tell; default to English, the user can change it.
+      return { text: res.text, language: LANGS.includes(res.language) ? res.language : "en", confidence: res.confidence };
     },
 
-    // -> { reply, language }
-    chat({ sessionId, message, contextText, language, history }) {
-      return request("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: sessionId,
-          message,
-          context_text: contextText,
-          language,
-          history, // [{ role: "user"|"assistant", content }]
-        }),
-      });
+    // -> { reply, language }. The backend keeps the history itself.
+    async chat({ sessionId, message, contextText, language }) {
+      const id = await backendSession(sessionId);
+      const form = new FormData();
+      form.append("message", message);
+      form.append("language", language);
+      form.append("context", contextText || "");
+      const res = await request(`/v1/sessions/${id}/chat`, { method: "POST", body: form });
+      return { reply: res.reply, language };
     },
   };
 
