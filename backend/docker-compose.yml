@@ -40,7 +40,8 @@ services:
   web:
     # Static files only; same as `python -m http.server` in frontend/.
     image: python:3.12-slim
-    command: ["python", "-m", "http.server", "5500", "--directory", "/frontend"]
+    # -u: print the "Serving HTTP" line right away instead of buffering it
+    command: ["python", "-u", "-m", "http.server", "5500", "--directory", "/frontend"]
     ports:
       - "5500:5500"
     volumes:
