@@ -206,7 +206,8 @@ def main() -> int:
                                       {"LLM_BASE_URL": LLM_BASE_URL, "LLM_MODEL": LLM_MODEL})))
         processes.append(("backend", start("backend", [*uvicorn, "--port", str(PORTS["backend"]), "main:app"], ROOT / "backend",
                                            {"AI_BASE_URL": f"http://{HOST}:{PORTS['ai']}",
-                                            "TTS_ENABLED": "true" if tts_ok else "false"})))
+                                            # Your own TTS_ENABLED wins; otherwise on if a voice engine exists.
+                                            "TTS_ENABLED": os.environ.get("TTS_ENABLED", "true" if tts_ok else "false")})))
         processes.append(("frontend", start("frontend", [python, "-m", "http.server", str(PORTS["frontend"]), "--bind", HOST],
                                             ROOT / "frontend", quiet=True)))
 

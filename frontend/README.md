@@ -6,50 +6,43 @@ Plain HTML, CSS and JavaScript. No build step, no npm, nothing to install. The p
 
 ## Quick start
 
-You only need Python 3, to run a small local web server.
+**To run the whole app (frontend + backend + AI), use `python run.py` from the repository root.** See the root [README](../README.md). It starts this frontend for you.
+
+To run only the frontend (for UI work):
 
 ```bash
 cd frontend
 python3 -m http.server 5500
 ```
 
-Then open **http://localhost:5500** in Chrome or Edge.
+Then open **http://localhost:5500/?demo** in Chrome or Edge. `?demo` gives fake answers, so no backend is needed. Without `?demo` the app calls the real backend at `http://127.0.0.1:8000`, and the top bar shows **Backend offline** if it isn't running.
 
-To stop the server, press `Ctrl+C` in the terminal.
+> **Mac:** use `python3`, not `python` (`python` usually doesn't exist on a Mac).
+> **Windows:** use `py -m http.server 5500`.
 
-> **Mac users:** use `python3`, not `python`. On most Macs, `python` doesn't exist and the command fails with "command not found".
->
-> **Windows users:** use `python` or `py`: `py -m http.server 5500`.
+You can also double-click `index.html`. Most of the app works, but voice input may be blocked by the browser.
 
-**Without a server:** you can also double-click `index.html`. Most of the app works, but voice input may be blocked by the browser.
+If you see `Address already in use`, the app is probably already running (just open the link), or use another port: `python3 -m http.server 5501`.
 
-### Port already in use?
+## Real backend vs demo mode
 
-If you see `Address already in use`, either a server is already running (just open the link) or something else is using port 5500. Use another port: `python3 -m http.server 5501`.
+| address                          | what happens                                                    | top bar |
+|----------------------------------|-----------------------------------------------------------------|---------|
+| `http://localhost:5500`          | real OCR and real AI answers through the backend                | **Backend connected** / **Backend offline** |
+| `http://localhost:5500/?demo`    | fake answers that match the 3 sample photos, no backend needed  | (hidden) |
 
-## Current status: demo mode
+`?demo` is a safe fallback for a live presentation: if anything on the backend side fails, add `?demo` and keep going. To make demo mode the default, set `USE_MOCK: true` in `config.js`.
 
-**The frontend is not connected to the backend yet.** It runs in demo mode with fake responses, so you can work on the UI without a backend. The pill in the top bar says **Demo mode**.
+When something goes wrong, the error box shows the backend's reason in brackets, e.g. *(502: AI service error (503): Cannot reach the language model …)*. If the backend can't be reached at all, it says how to start it.
 
-Before it can connect, two things have to happen:
-
-1. **The routes need to match.** The frontend calls `/api/health`, `/api/extract` and `/api/chat` (see `API_CONTRACT.md`). The backend (`backend/`) currently has `/v1/sessions`, `/v1/sessions/{id}/images` and `/v1/sessions/{id}/chat`. One side needs to change. All frontend calls live in `api.js`.
-2. **Switch off demo mode** in `config.js`:
-   ```js
-   USE_MOCK: false,
-   API_BASE_URL: "http://127.0.0.1:8000",   // or "" if FastAPI serves this folder
-   ```
-
-Then the top bar shows **Backend connected** or **Backend offline**.
-
-## Trying the demo
+## Trying it
 
 1. Open the app. The landing page appears first; click **Try the demo** or **Open app**.
-2. Under the photo box, click a sample: **English notice**, **French notice** or **Bilingual sign**.
-3. Check the extracted text (you can edit it), then press **Read aloud**.
-4. Ask a question, or tap a chip like *What should I do?* or *Translate it*.
+2. Under the photo box, click a sample: **English notice**, **French notice** or **Bilingual sign**, or add your own photo.
+3. Check the extracted text (you can fix mistakes; the chat uses your fixed version), then press **Read aloud**.
+4. Ask a question, or tap a chip like *What should I do?* or *Translate it*. Answers come back in the interface language (EN/FR buttons in the top bar).
 
-The fake answers match the three sample photos, so the demo looks real. For your own photos in demo mode, a file name containing `fr`, `en` or `mix` picks the fake language; otherwise it cycles EN → FR → mixed. A name containing `fail` shows the error state.
+In demo mode, for your own photos, a file name containing `fr`, `en` or `mix` picks the fake language; otherwise it cycles EN → FR → mixed. A name containing `fail` shows the error state.
 
 ## Settings (`config.js`)
 
@@ -57,8 +50,8 @@ The fake answers match the three sample photos, so the demo looks real. For your
 |-----------------|---------------------------------------------------------------------|
 | `APP_NAME`      | name shown everywhere in the UI                                     |
 | `SHOW_INTRO`    | `true` shows the landing page first; `false` opens straight to the app |
-| `USE_MOCK`      | `true` = fake responses, `false` = call the real backend            |
-| `API_BASE_URL`  | backend address; `""` means same origin                             |
+| `USE_MOCK`      | `true` = fake responses, `false` = real backend (default; `?demo` in the address also turns on fake responses) |
+| `API_BASE_URL`  | backend address, default `http://127.0.0.1:8000`; `""` means same address as this page |
 | `MAX_IMAGE_MB`  | biggest photo the app will send                                     |
 
 ## One-file version
@@ -79,7 +72,7 @@ This bundles everything into `dist/lumen.html`, a single file you can send to an
 | `intro.css` / `intro.js`  | landing page                                                   |
 | `config.js`               | settings: demo mode switch, backend URL, app name              |
 | `i18n.js`                 | every piece of UI text, in English and French                  |
-| `api.js`                  | all backend calls, plus the fake responses                     |
+| `api.js`                  | all backend calls (`/v1/...`, see `API_CONTRACT.md`), plus the fake responses |
 | `samples.js`              | the 3 sample photos, embedded so they work offline (`samples/` has the originals) |
 | `speech.js`               | read aloud (text-to-speech) and voice input (speech-to-text)   |
 | `app.js`                  | ties it together: upload, text panel, player, chat             |
@@ -104,5 +97,5 @@ This bundles everything into `dist/lumen.html`, a single file you can send to an
 
 - **Read aloud uses the voices installed on the computer.** If no French voice is installed, a default voice is used and the UI says so. On Windows: Settings → Time & language → Speech → Add voices → French (Canada). On macOS: System Settings → Accessibility → Spoken Content → System voice → Manage voices.
 - **Word highlighting** needs the computer's built-in voices. Some online voices in Chrome don't report word positions, so the text shows without highlighting.
-- **Voice input isn't offline.** Chrome and Edge send audio to an online service. For a fully offline app, the backend needs a Whisper `/api/transcribe` route (see `API_CONTRACT.md`). Firefox has no voice input; the UI shows a message instead.
+- **Voice input isn't offline.** Chrome and Edge send audio to an online service. For a fully offline app, the AI service's `/v1/stt` needs Whisper (see `API_CONTRACT.md`). Firefox has no voice input; the UI shows a message instead.
 - **Fonts** load from Google Fonts when online and fall back to system fonts offline.
