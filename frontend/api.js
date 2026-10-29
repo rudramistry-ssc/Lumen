@@ -38,6 +38,18 @@
       return request(`/v1/sessions/${id}/images`, { method: "POST", body: form });
     },
 
+    // -> { session_id, clip_id, audio_url, bytes, content_type, ms }
+    // The backend stores the clip and returns a URL we can play back. It does
+    // not transcribe yet: the AI service has no /v1/stt.
+    async uploadAudio(sessionId, blob) {
+      const id = await backendSessionId(sessionId);
+      const type = blob.type || "audio/webm";
+      const ext = type.includes("ogg") ? "ogg" : type.includes("mp4") ? "m4a" : "webm";
+      const form = new FormData();
+      form.append("file", blob, `clip.${ext}`);
+      return request(`/v1/sessions/${id}/audio`, { method: "POST", body: form });
+    },
+
     // -> { transcript, reply, audio_url }
     // The backend stores the scan text and the chat history itself, so
     // contextText / language / history from app.js are not sent.
@@ -106,6 +118,19 @@
       else if (/en/.test(name)) language = "en";
       else language = ["en", "fr", "mixed"][mockCount++ % 3];
       return { text: SAMPLES[language].text, language, confidence: [0.94, 0.91, 0.88][["en", "fr", "mixed"].indexOf(language)] };
+    },
+
+    async uploadAudio(sessionId, blob) {
+      await wait(500);
+      // A blob URL plays in <audio>, so demo mode can preview the recording.
+      return {
+        session_id: sessionId,
+        clip_id: "mock-clip",
+        audio_url: URL.createObjectURL(blob),
+        bytes: blob.size,
+        content_type: blob.type || "audio/webm",
+        ms: 8,
+      };
     },
 
     async chat({ message, contextText, language }) {

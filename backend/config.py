@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     # "*" allows any origin; set a comma-separated list for the real frontend.
     cors_origins: str = "*"
     max_upload_mb: int = 15
+    # Microphone clips are much smaller than photos; same limit for now.
+    max_audio_mb: int = 15
     tts_voice: str = "en-US-AvaNeural"  # passed through to the AI service
     # Off until the AI service offers /v1/tts; scans then return text only.
     tts_enabled: bool = False

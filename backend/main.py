@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
 from db import init_db
-from routers import chat, images, sessions
+from routers import audio, chat, images, sessions
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.add_middleware(
 app.include_router(sessions.router, prefix="/v1")
 app.include_router(images.router, prefix="/v1")
 app.include_router(chat.router, prefix="/v1")
+app.include_router(audio.router, prefix="/v1")
 
 
 @app.get("/healthz")

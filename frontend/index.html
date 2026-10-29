@@ -287,7 +287,7 @@
         </div>
 
         <form id="chat-form" class="composer" autocomplete="off">
-          <button type="button" id="mic-btn" class="icon-btn mic-btn" data-i18n-aria="voiceInput">
+          <button type="button" id="mic-btn" class="icon-btn mic-btn" data-i18n-aria="voiceInput" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
           <label for="chat-input" class="visually-hidden" data-i18n="chatLabel">Your question</label>
@@ -295,6 +295,7 @@
           <button type="submit" id="send-btn" class="pill pill-white pill-sm" data-i18n="send">Send</button>
         </form>
         <p id="mic-note" class="hint mic-note" hidden></p>
+        <audio id="mic-preview" class="mic-preview" controls hidden data-i18n-aria="micPreview"></audio>
       </section>
     </main>
 

@@ -62,6 +62,6 @@ def get_media(name: str):
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(
         path,
-        media_type="audio/mpeg",
+        media_type=storage_service.media_type(name),
         headers={"Cache-Control": "public, max-age=86400"},
     )

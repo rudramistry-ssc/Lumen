@@ -18,6 +18,15 @@ class ScanOut(BaseModel):
     ms: int            # total OCR + TTS time, handy during the demo
 
 
+class ClipOut(BaseModel):
+    session_id: str
+    clip_id: str       # generated filename, e.g. <32 hex>.webm
+    audio_url: str     # /v1/media/<clip_id>, playable in the UI
+    bytes: int         # stored size
+    content_type: str  # what the browser sent, e.g. audio/webm
+    ms: int            # time spent storing, shown in the demo
+
+
 class ChatOut(BaseModel):
     transcript: str    # what the user said (STT) or typed
     reply: str         # answer, grounded in the scanned text

@@ -60,6 +60,38 @@ Response:
 Errors: `404` unknown session, `413` image too large, `415` not an image,
 `422` no readable text found.
 
+## `POST /v1/sessions/{session_id}/audio`
+
+Voice clip from the microphone. **Stores it and returns a playable URL; it
+does not transcribe yet** — the AI service has no `/v1/stt`.
+
+Request: `multipart/form-data`
+
+| field  | type | notes                                                          |
+|--------|------|----------------------------------------------------------------|
+| `file` | file | `audio/webm` (Chrome/Edge), `audio/ogg` (Firefox), `audio/mp4` (Safari) |
+
+The field is named **`file`**, like the image upload. The browser records
+with `MediaRecorder` (`Speech.record()` in `speech.js`), so this works
+offline. Clips are capped at `MAX_AUDIO_MB` (15 MB) and the UI stops
+recording automatically after 60 s.
+
+Response `201`:
+
+```json
+{
+  "session_id": "…",
+  "clip_id": "b5dc3f846015456683efaca1e5fb7d7f.webm",
+  "audio_url": "/v1/media/b5dc3f846015456683efaca1e5fb7d7f.webm",
+  "bytes": 24576,
+  "content_type": "audio/webm;codecs=opus",
+  "ms": 3
+}
+```
+
+Errors: `404` unknown session, `413` clip too large, `415` not audio or an
+unsupported container, `422` empty file.
+
 ## `POST /v1/sessions/{session_id}/chat`
 
 Follow-up questions about the scanned text.
@@ -94,15 +126,19 @@ Session plus its latest scan. Useful after a page reload to recover the text.
 
 ## `GET /v1/media/{name}`
 
-Generated MP3 audio. Nothing is generated until TTS exists.
+Generated audio: TTS MP3s and uploaded voice clips. The `Content-Type`
+follows the extension (`audio/mpeg`, `audio/webm`, `audio/ogg`, `audio/wav`,
+`audio/mp4`). Names are 32 hex characters plus an extension; anything else
+answers `404`.
 
 ## Not needed yet
 
 - **Text-to-speech:** done in the browser for now (works offline with the
   computer's voices). Later this could become `POST /v1/tts` → audio file.
-- **Voice input:** the browser's speech recognition is used for now, which is
-  not offline. For true offline use the chat route already accepts an `audio`
-  file, so a Whisper step inside the AI service would be enough.
+- **Voice input:** recorded locally with `MediaRecorder` and uploaded to
+  `/v1/sessions/{id}/audio`, which works offline. The missing piece is
+  transcription: the AI service needs `/v1/stt` (Whisper), and the chat route
+  already accepts an `audio` file for that.
 
 ## History
 

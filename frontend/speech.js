@@ -35,9 +35,19 @@
 
   let current = null;
 
+  // Chrome/Edge record WebM, Firefox Ogg, Safari MP4. Prefer Opus when offered.
+  function pickMimeType() {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+    const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+    return candidates.find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  }
+
   window.Speech = {
     supported: !!synth,
     canListen: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+    // MediaRecorder keeps the audio local; unlike SpeechRecognition this works
+    // offline. getUserMedia needs a secure context (localhost or HTTPS).
+    canRecord: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder),
 
     hasVoice: (lang) => !!pickVoice(lang),
 
@@ -79,6 +89,62 @@
       rec.onend = () => onEnd && onEnd();
       rec.start();
       return () => rec.stop();
+    },
+
+    // Records a clip with the microphone and keeps it in memory. Resolves to
+    // { mimeType, stop() }, where stop() returns a Promise<Blob>. Safe to call
+    // stop() more than once; the same promise is returned.
+    async record({ maxMs = 60000, onAutoStop } = {}) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+        const err = new Error("Recording is not supported");
+        err.name = "NotSupportedError";
+        throw err;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickMimeType();
+      let rec;
+      try {
+        rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      } catch (err) {
+        stream.getTracks().forEach((t) => t.stop());
+        throw err;
+      }
+
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+      const done = new Promise((resolve, reject) => {
+        rec.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          resolve(new Blob(chunks, { type: rec.mimeType || mimeType || "audio/webm" }));
+        };
+        rec.onerror = (e) => {
+          stream.getTracks().forEach((t) => t.stop());
+          reject((e && e.error) || new Error("recorder-error"));
+        };
+      });
+
+      let stopped = false;
+      let timer = null;
+      const stop = () => {
+        clearTimeout(timer);
+        if (!stopped) {
+          stopped = true;
+          if (rec.state !== "inactive") rec.stop();
+        }
+        return done;
+      };
+
+      rec.start();
+      // Safety net: never leave the microphone open if the user walks away.
+      timer = setTimeout(() => {
+        if (stopped) return;
+        stop();
+        if (onAutoStop) onAutoStop();
+      }, maxMs);
+
+      return { mimeType: rec.mimeType || mimeType || "audio/webm", stop };
     },
   };
 

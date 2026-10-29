@@ -89,6 +89,7 @@ container so `http://ai:8000` resolves from the api container.
 | Detected language     | ✅ Added                                 | Returned as `language` in scan response and `GET /v1/sessions/{id}`.  |
 | Text from picture     | Same scan response                       | Available in `text`.                                                  |
 | Read aloud / pause    | `audio_url` from scan response           | Plain MP3; pause/play handled client-side with HTML `<audio>`. No extra endpoint required. |
+| Voice clip            | `POST /v1/sessions/{id}/audio`           | `multipart/form-data`, field name: `file`; stored and playable, not transcribed yet. |
 | Chat – text input     | `POST /v1/sessions/{id}/chat`            | `multipart/form-data`, field name: `message`.                         |
 | Chat – voice input    | `POST /v1/sessions/{id}/chat`            | `multipart/form-data`, field name: `audio` (`audio/webm` from `MediaRecorder`). |
 | Chat – text output    | Same chat response                       | Returned in `reply` (plus transcript of the user's message).          |

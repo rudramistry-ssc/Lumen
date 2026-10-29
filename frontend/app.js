@@ -348,21 +348,106 @@
   }
 
   // ---------- voice input ----------
-  $("mic-btn").addEventListener("click", () => {
+  // Preferred path: record with MediaRecorder and upload the clip. It works
+  // offline and needs no cloud speech service. If the browser cannot record,
+  // fall back to SpeechRecognition (Chrome/Edge, online only).
+  let recorder = null;
+  let uploading = false;
+  let starting = false; // true while the browser is asking for the mic
+
+  function setMicState(active) {
+    $("mic-btn").classList.toggle("is-listening", active);
+    $("mic-btn").setAttribute("aria-pressed", String(active));
+  }
+
+  function showNote(key, vars) {
     const note = $("mic-note");
-    if (state.stopListening) { state.stopListening(); return; }
-    if (!Speech.canListen) { note.textContent = t("micUnsupported"); note.hidden = false; return; }
-    stopAll();
-    note.textContent = t("listening");
+    note.textContent = t(key, vars);
     note.hidden = false;
-    $("mic-btn").classList.add("is-listening");
+  }
+
+  function hideNote() {
+    const note = $("mic-note");
+    note.hidden = true;
+    note.textContent = "";
+  }
+
+  // Relative media URLs need the API origin when the UI is served separately;
+  // blob: URLs from demo mode are used as-is.
+  function apiUrl(path) {
+    if (!path || /^(blob:|data:|https?:)/i.test(path)) return path || "";
+    return (cfg.API_BASE_URL || "").replace(/\/$/, "") + path;
+  }
+
+  async function stopRecordingAndUpload() {
+    if (!recorder) return;
+    const current = recorder;
+    recorder = null;
+    setMicState(false);
+    uploading = true;
+    try {
+      const blob = await current.stop();
+      if (!blob || !blob.size) { showNote("micEmpty"); return; }
+      showNote("micUploading");
+      const res = await API.uploadAudio(state.sessionId, blob);
+      const audio = $("mic-preview");
+      audio.src = apiUrl(res.audio_url);
+      audio.hidden = false;
+      showNote("micRecorded");
+    } catch (err) {
+      console.error(err);
+      showNote("micUploadFailed");
+    } finally {
+      uploading = false;
+    }
+  }
+
+  async function startRecording() {
+    if (starting) return; // ignore double-clicks while the mic prompt is open
+    starting = true;
+    hideNote();
+    stopAll();
+    try {
+      recorder = await Speech.record({
+        maxMs: 60000,
+        onAutoStop: () => stopRecordingAndUpload(),
+      });
+    } catch (err) {
+      const code = err && err.name === "NotAllowedError" ? "micDenied"
+        : err && err.name === "NotFoundError" ? "micNoDevice"
+        : "micUnsupported";
+      showNote(code);
+      return;
+    } finally {
+      starting = false;
+    }
+    setMicState(true);
+    showNote("micRecording");
+  }
+
+  $("mic-btn").addEventListener("click", () => {
+    if (uploading || starting) return;
+    if (recorder) { stopRecordingAndUpload(); return; }
+    if (state.stopListening) { state.stopListening(); return; }
+    if (Speech.canRecord) { startRecording(); return; }
+    if (!Speech.canListen) { showNote("micUnsupported"); return; }
+
+    // Fallback: the browser's cloud recognition, used only when recording is
+    // unavailable. It needs an internet connection.
+    stopAll();
+    showNote("listening");
+    setMicState(true);
     state.stopListening = Speech.listen(replyLang(), {
       onResult: (text) => { $("chat-input").value = text; autoGrow(); send(); },
-      onError: (err) => { note.textContent = err === "not-allowed" ? t("micDenied") : t("micUnsupported"); },
+      onError: (err) => {
+        if (err === "not-allowed") showNote("micDenied");
+        else if (err === "network") showNote("micNetwork");
+        else showNote("micUnsupported");
+      },
       onEnd: () => {
         state.stopListening = null;
-        $("mic-btn").classList.remove("is-listening");
-        if (note.textContent === t("listening")) note.hidden = true;
+        setMicState(false);
+        if ($("mic-note").textContent === t("listening")) hideNote();
       },
     });
   });
@@ -379,6 +464,14 @@
   function resetSession() {
     stopAll();
     if (state.stopListening) state.stopListening();
+    if (recorder) { const r = recorder; recorder = null; r.stop().catch(() => {}); }
+    uploading = false;
+    setMicState(false);
+    hideNote();
+    const micPreview = $("mic-preview");
+    micPreview.pause();
+    micPreview.hidden = true;
+    micPreview.removeAttribute("src");
     Object.assign(state, { sessionId: newId(), file: null, text: "", language: "en", history: [] });
     playing = null;
     $("preview").hidden = true;
