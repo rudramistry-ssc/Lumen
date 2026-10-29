@@ -18,17 +18,20 @@ def main():
     serve.add_argument("--binary")
     serve.add_argument("--model")
     serve.add_argument("--projector", help="Optional local Q8 projector; omit for OCR-only chat")
-    serve.add_argument("--vision", action="store_true", help="Load the cached Qwen vision projector (or SIGNSPEAK_LLM_PROJECTOR)")
+    serve.add_argument("--vision", action="store_true", default=True, help="Default: load the cached Qwen vision projector")
+    serve.add_argument("--text-only", dest="vision", action="store_false", help="Explicit legacy/evaluation mode; cannot process normal uploads")
     serve.add_argument("--threads", type=int, default=4)
-    serve.add_argument("--context-size", type=int, default=4096)
+    serve.add_argument("--context-size", type=int, default=8192)
     serve.add_argument("--port", type=int, default=8091)
-    ask = sub.add_parser("ask", help="Answer from a saved adapter view; never runs OCR")
+    ask = sub.add_parser("ask", help="Answer from a completed selected-document JSON; never reanalyzes the image")
     ask.add_argument("context", type=Path)
     ask.add_argument("question")
     ask.add_argument("--history", type=Path)
     ask.add_argument("--language", choices=["auto", "en", "fr"], default="auto")
     ask.add_argument("--url")
-    ask.add_argument("--context-size", type=int, default=4096)
+    ask.add_argument("--context-size", type=int, default=8192)
+    ask.add_argument("--allow-legacy-ocr", action="store_true")
+    ask.add_argument("--allow-ocr-fallback", action="store_true")
     ask.add_argument("--max-tokens", type=int, default=192)
     reconcile = sub.add_parser("reconcile", help="Transcribe image + saved adapter evidence; cache the separate result")
     reconcile.add_argument("image", type=Path)
@@ -64,7 +67,14 @@ def main():
             return 2 if result["status"] == "fallback" else 0
         else:
             context = json.loads(args.context.read_text(encoding="utf-8-sig"))
-            context = context.get("llm_context", context)
+            if "selected_views" in context:
+                if context.get("status") == "ocr_unreviewed_fallback" and not args.allow_ocr_fallback:
+                    raise ValueError("Unreviewed OCR fallback requires explicit --allow-ocr-fallback")
+                context = context["selected_views"]["llm_context"]
+            elif args.allow_legacy_ocr:
+                context = context.get("llm_context", context)
+            else:
+                raise ValueError("Use a completed DocumentProcessor JSON; OCR-only Q&A requires explicit --allow-legacy-ocr")
             history = json.loads(args.history.read_text(encoding="utf-8-sig")) if args.history else []
             result = LocalLLM(args.url, context_size=args.context_size, max_tokens=args.max_tokens).answer(
                 context, args.question, history, language=args.language)

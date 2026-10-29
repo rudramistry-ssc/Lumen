@@ -1,5 +1,19 @@
 # SignSpeak offline voice conversation
 
+**Current default:** initialize with `DocumentSession.from_document(document)`
+after `DocumentProcessor.process(image_bytes)`. See
+[upload-once integration](../llm/DOCUMENTS.md). Original OCR-only session views
+are disabled unless explicitly requested for legacy use. All question calls use
+the cached final interpretation; no image analysis occurs here. `voice/demo.py`
+now requires `--views <completed-document.json>`; use `handoff/smoke.py` to test
+the full default upload path. Historical timing results remain preserved.
+
+The selected document now comes from one independent vision transcription; OCR
+is separate advisory evidence. `voice.read_document(session, language="en")`
+reads the saved literal text plus explicitly labelled visual descriptions without
+calling Qwen. Set `include_visual_descriptions=False` for literal-only reading.
+Legacy v1 mixed-text caches require explicit review/reclassification for v2 use.
+
 Small adapter over the existing `stt/`, `llm/` and `speech/` packages. It does
 not run OCR/reconciliation, provision models, start a server per question, play
 audio or implement backend routes. Existing modules and their caches are untouched.
@@ -10,7 +24,7 @@ Use already-provisioned Whisper Base, Qwen3-VL and English/French Piper voices.
 From the repository root in PowerShell, reuse the Piper environment (no installs):
 
 ```powershell
-& speech/.venv/Scripts/python.exe voice/demo.py --start-server --scripted-confirmation
+& speech/.venv/Scripts/python.exe voice/demo.py --views completed-document.json --start-server --scripted-confirmation
 ```
 
 This explicitly starts **one** existing Qwen `Server` for the entire evaluation,
@@ -63,7 +77,7 @@ The saved prompt is not a verified transcript of what you actually say.
 After recording, provide the paths or run the interactive demo:
 
 ```powershell
-& speech/.venv/Scripts/python.exe voice/demo.py --start-server `
+& speech/.venv/Scripts/python.exe voice/demo.py --views completed-document.json --start-server `
   --english voice/runtime/microphone-<timestamp>/english.wav `
   --french voice/runtime/microphone-<timestamp>/french.wav
 ```
@@ -83,12 +97,11 @@ this adapter adds no third-party framework or inference dependencies.
 
 ```python
 from signspeak_voice import DocumentSession, VoiceConversation
+from signspeak_llm import DocumentProcessor
 
 # Load ONCE per uploaded document; retain original records unchanged.
-session = DocumentSession(views, records={
-    "original_ocr": original_ocr,
-    "reconciliation": cached_reconciliation,  # optional; retained, not recomputed
-})
+document = DocumentProcessor().process(original_image_bytes)  # once per upload, not per question
+session = DocumentSession.from_document(document)
 voice = VoiceConversation()  # retain this application-level instance
 
 # Step 1: never calls Qwen or changes history.
@@ -109,9 +122,9 @@ typed_result = voice.answer_question(session, "And at what time?", language="en"
 history_for_persistence = session.history
 ```
 
-- Input is the existing complete adapter `views`, including `llm_context`.
-  `DocumentSession.from_file(path)` accepts cached views directly or the existing
-  evaluation `{views, source}` wrapper. A new session starts a new conversation.
+- Input is a completed `DocumentProcessor` result via `from_document`, or its
+  saved JSON via `from_file`. OCR-only views require explicit legacy opt-in.
+  A new session starts a new conversation; the shared document cache stores no history.
   Restore a persisted session with the same document, `session_id=...` and
   complete `history=[user, assistant, ...]` pairs. Keep records associated with
   that document; never reuse another image's history. Snapshot copies protect

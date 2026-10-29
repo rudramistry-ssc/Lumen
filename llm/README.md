@@ -1,5 +1,12 @@
 # SignSpeak local LLM
 
+**Current application default:** [Upload-once selected documents](DOCUMENTS.md).
+Run the vision-enabled server once; `DocumentProcessor.process` performs OCR,
+independent vision, then caches its transcription as the selected document.
+OCR differences are advisory; hybrid inference is evaluation/debug only.
+Use its selected views for display/TTS/Q&A. The OCR-only examples and benchmarks
+below describe historical low-level interfaces; they are not the default upload path.
+
 For the new OCR + image transcription module, its cache contract and three-way
 pilot, see [Hybrid reconciliation](RECONCILIATION.md). Earlier benchmark results
 and the Phase 3.1 comparison artifacts remain preserved.
@@ -24,7 +31,7 @@ In a second PowerShell terminal, set the same environment variables and run:
 ```powershell
 & ocr/.venv/Scripts/python.exe llm/example.py
 # Reuse saved adapter output; no OCR is performed by this command:
-& ocr/.venv/Scripts/python.exe -m signspeak_llm ask llm/runtime/example-views.json 'When does it reopen?' --language en
+& ocr/.venv/Scripts/python.exe -m signspeak_llm ask completed-document.json 'When does it reopen?' --language en
 ```
 
 `example.py` runs OCR only when its cache is absent, preserving source JSON and
@@ -74,7 +81,7 @@ from signspeak_llm import LocalLLM
 
 client = LocalLLM(base_url="http://127.0.0.1:8091", context_size=4096)
 result = client.answer(
-    views["llm_context"],
+    document["selected_views"]["llm_context"],
     question="Quand la bibliothèque rouvre-t-elle ?",
     history=[{"role": "user", "content": "Quel établissement est mentionné ?"},
              {"role": "assistant", "content": "La bibliothèque."}],
@@ -83,7 +90,7 @@ result = client.answer(
 reply = result["answer"]
 ```
 
-- Input is the **complete adapter `llm_context` object**, not raw OCR `text` or
+- For normal application use, input is the **selected document `llm_context` object**, not raw OCR `text` or
   `text_view`. Retain original OCR JSON and derived views with the image session.
 - History is chronological `user`/`assistant` text for this image; the current
   question is separate. The backend owns history and resets it for a new image.

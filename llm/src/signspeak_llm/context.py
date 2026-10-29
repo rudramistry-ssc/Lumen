@@ -29,12 +29,13 @@ def compact_context(source):
     by_id = {r["id"]: r for r in regions}
     result = {"verification": "not_performed", "reading_order": sequence,
               "regions": [{k: _without_geometry(by_id[i][k]) for k in (
-                  "id", "text", "language", "flags", "coverage", "tentative_words")
+                  "id", "text", "text_state", "language", "flags", "coverage", "tentative_words")
                   if k in by_id[i] and by_id[i][k] not in (None, [], "")} for i in sequence]}
     reconstructed = "\n\n".join(by_id[i].get("text", "") for i in sequence)
     if reconstructed != source["selected_text"]:
         result["selected_text"] = source["selected_text"]
-    for key in ("numeric_values", "numeric_conflicts", "warnings", "errors", "validation", "language"):
+    for key in ("numeric_values", "numeric_conflicts", "warnings", "errors", "validation", "language",
+                "visual_descriptions", "text_observations", "ocr_discrepancies"):
         if source.get(key):
             result[key] = _without_geometry(source[key])
     if sequence != order:

@@ -35,7 +35,7 @@ def dependencies(ocr=False):
         if (operator == "==" and actual != wanted) or (operator == ">=" and numbers(actual) < numbers(wanted)):
             problems.append(f"Installed {name}=={actual}; requires {spec}")
     if sys.version_info < (3, 11): problems.append("Python >=3.11 required")
-    for module in (("numpy", "PIL", "signspeak_ocr") if ocr else ("piper", "onnxruntime", "signspeak_llm", "signspeak_stt", "signspeak_voice")):
+    for module in (("numpy", "PIL", "cv2", "signspeak_ocr", "signspeak_llm") if ocr else ("piper", "onnxruntime", "signspeak_llm", "signspeak_stt", "signspeak_voice")):
         try: importlib.import_module(module)
         except Exception as exc: problems.append(f"Cannot import {module}: {exc}")
     return {"interpreter": sys.executable, "python": sys.version.split()[0], "versions": versions, "problems": problems}
@@ -88,7 +88,7 @@ def run_checks(ocr_python=None, *, service=True):
         if data["problems"]: raise RuntimeError("; ".join(data["problems"]))
         return data
     check("python_voice_dependencies", python_check, "Use a consuming environment with speech/requirements.txt and the five local packages. Existing speech/.venv is suitable for voice-only calls.")
-    check("ocr", lambda: worker(ocr_python or sys.executable, "ocr"), "Install ./ocr[preprocess] in the chosen OCR environment; install Tesseract with eng/fra or set SIGNSPEAK_TESSERACT_CMD/SIGNSPEAK_TESSDATA_DIR. See ocr/README.md.")
+    check("ocr", lambda: worker(ocr_python or os.getenv("SIGNSPEAK_DOCUMENT_PYTHON") or sys.executable, "ocr"), "Install ./ocr[preprocess] and ./llm in the chosen upload worker environment; install Tesseract with eng/fra or set SIGNSPEAK_TESSERACT_CMD/SIGNSPEAK_TESSDATA_DIR. See ocr/README.md.")
     server = Server(runtime=ROOT/"handoff/runtime")
     check("qwen_model", lambda: {"path": str(server.model), **verify_file(server.model)}, "Set SIGNSPEAK_LLM_MODEL or run: python llm/src/signspeak_llm/models.py vl (explicit first-install download).")
     projector = Path(os.getenv("SIGNSPEAK_LLM_PROJECTOR", str(default_model_dir()/"mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf")))
@@ -108,9 +108,10 @@ def run_checks(ocr_python=None, *, service=True):
     check("whisper_executable", lambda: runtime(executable(), ["--help"], "--language"), "Run python stt/src/signspeak_stt/provision.py on Windows, or build the pinned native Linux whisper-cli; set SIGNSPEAK_WHISPER_CLI.")
     check("whisper_model", lambda: {"path": str(model_path()), "revision": MODEL["revision"], "sha256": verify_stt(model_path(), MODEL)}, "Run python stt/src/signspeak_stt/provision.py explicitly; set SIGNSPEAK_WHISPER_MODEL for a persistent model mount.")
     for name, path in [("temporary_storage", tempfile.gettempdir()), ("handoff_outputs", ROOT/"handoff"),
+                       ("document_cache", os.getenv("SIGNSPEAK_DOCUMENT_CACHE", str(Path.home()/".cache/signspeak/documents"))),
                        ("whisper_cache", cache_root()), ("qwen_cache", server.model.parent),
                        *[(f"piper_{lang}_cache", voice_directory(lang)) for lang in VOICES]]:
-        check(name, lambda path=path: writable(path), "Configure writable temp/output locations. Model directories may be read-only after provisioning; use a writable mount only during first install.", required=name in ("temporary_storage", "handoff_outputs"))
+        check(name, lambda path=path: writable(path), "Configure writable temp/output locations. Model directories may be read-only after provisioning; use a writable mount only during first install.", required=name in ("temporary_storage", "handoff_outputs", "document_cache"))
     ffmpeg = os.getenv("SIGNSPEAK_FFMPEG") or shutil.which("ffmpeg")
     check("optional_ffmpeg", lambda: runtime(ffmpeg or "ffmpeg", ["-version"], "ffmpeg"), "Install a native FFmpeg build and set SIGNSPEAK_FFMPEG only if accepting WebM/Opus; canonical WAV needs none.", required=False)
     if service:
@@ -119,9 +120,17 @@ def run_checks(ocr_python=None, *, service=True):
             data = client.health()
             if data.get("status") != "ok": raise RuntimeError(f"Service is not healthy: {data}")
             props = client.json_request("/props")
+            if not (props.get("modalities") or {}).get("vision"):
+                raise RuntimeError("Qwen is responding but vision is disabled. Restart the shared server once with --vision --context-size 8192.")
+            if Path(props.get("model_path", "")).name != server.model.name:
+                raise RuntimeError("Running server model does not match the configured pinned Qwen VL filename")
+            context_size = props.get("default_generation_settings", {}).get("n_ctx")
+            if not isinstance(context_size, int) or context_size < 8192:
+                raise RuntimeError("Default accuracy-first upload needs an 8192-token server slot; restart once with --context-size 8192")
             return {"url": client.base_url, "health": data, "context_size": props.get("default_generation_settings", {}).get("n_ctx"),
-                    "note": "Health confirms a responding server, not semantic answer correctness or projector activation; run smoke test."}
-        check("qwen_service", healthy, "Start once: python -m signspeak_llm serve --threads 4. Set SIGNSPEAK_LLM_URL to that trusted local/container origin; add --vision only for optional image use.")
+                    "vision_enabled": True, "model_path": props["model_path"],
+                    "note": "Health/capability checks are not semantic answer verification; run smoke test."}
+        check("qwen_service", healthy, "Start once: python -m signspeak_llm serve --vision --context-size 8192 --threads 4. Set SIGNSPEAK_LLM_URL to that trusted local/container origin.")
     return {"ready": all(x["status"] == "pass" for x in checks if x["required"]), "interpreter": sys.executable,
             "checks": checks, "downloads": "never performed", "service_checked": service}
 

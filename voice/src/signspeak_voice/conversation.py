@@ -8,16 +8,22 @@ import time
 import uuid
 
 from signspeak_llm import LocalLLM
+from signspeak_llm import guardrails
+from signspeak_llm.client import SYSTEM, STRICT_SYSTEM
 from signspeak_speech import PiperSpeech
 from signspeak_stt import WhisperSTT
 
 
 class DocumentSession:
     """Application-owned document snapshot and shared typed/spoken history."""
-    def __init__(self, views, *, session_id=None, records=None, history=None):
+    def __init__(self, views, *, session_id=None, records=None, history=None, allow_legacy_ocr=False):
         context = views.get("llm_context") if isinstance(views, dict) else None
         if not isinstance(context, dict) or not isinstance(context.get("selected_text"), str) or not isinstance(context.get("regions"), list):
             raise ValueError("Expected existing adapter views containing llm_context")
+        if (context.get("source") or {}).get("origin") not in {"selected_document", "ocr_unreviewed_fallback"} and not allow_legacy_ocr:
+            raise ValueError("OCR-only session disabled by default. Use DocumentProcessor.process then DocumentSession.from_document; legacy tests may explicitly set allow_legacy_ocr=True")
+        if not allow_legacy_ocr and (context.get("source") or {}).get("document_schema") != "signspeak-selected-document-2":
+            raise ValueError("Legacy selected views require explicit review/reclassification before normal use")
         history = history if history is not None else []
         if not isinstance(history, list) or len(history) % 2 or any(
             not isinstance(item, dict) or item.get("role") != ("user" if i % 2 == 0 else "assistant")
@@ -29,12 +35,30 @@ class DocumentSession:
         self._lock = threading.RLock()
 
     @classmethod
-    def from_file(cls, path):
+    def from_document(cls, document, *, allow_fallback=False):
+        """New upload path: consume ONLY selected views, keep evidence separate."""
+        if not isinstance(document, dict) or not isinstance(document.get("selected_views"), dict):
+            raise ValueError("Expected a completed DocumentProcessor result")
+        if document.get("schema_version") != "signspeak-selected-document-2":
+            raise ValueError("Legacy mixed-format document preserved but requires explicit review/reclassification; it is not a typed literal/visual document and will not be reanalyzed automatically")
+        if document.get("status") == "ocr_unreviewed_fallback" and not allow_fallback:
+            raise ValueError("AI interpretation failed; explicitly allow labelled OCR fallback or request review")
+        views = document["selected_views"]
+        if any(document.get("text") != views.get(name, {}).get(key) for name, key in
+               (("llm_context", "selected_text"), ("display", "text"), ("speech", "text"))):
+            raise ValueError("Final text and selected consumer views disagree")
+        return cls(views, records={"document_id": document["document_id"], "evidence_ref": document.get("evidence_ref"),
+                                   "status": document["status"], "warnings": deepcopy(document.get("warnings", []))})
+
+    @classmethod
+    def from_file(cls, path, *, allow_fallback=False, allow_legacy_ocr=False):
         """Read cached adapter output or existing {views, source} evaluation cache."""
         data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if "selected_views" in data:
+            return cls.from_document(data, allow_fallback=allow_fallback)
         if "views" in data:
-            return cls(data["views"], records={k: v for k, v in data.items() if k != "views"})
-        return cls(data)
+            return cls(data["views"], records={k: v for k, v in data.items() if k != "views"}, allow_legacy_ocr=allow_legacy_ocr)
+        return cls(data, allow_legacy_ocr=allow_legacy_ocr)
 
     @property
     def history(self):
@@ -50,6 +74,12 @@ class VoiceConversation:
         self.stt = stt if stt is not None else WhisperSTT()
         self.llm = llm if llm is not None else LocalLLM()
         self.speech = speech if speech is not None else PiperSpeech()
+
+    def read_document(self, session, *, language=None, include_visual_descriptions=True):
+        """Read cached vision content; interpretations are labelled, no LLM call."""
+        if not isinstance(session, DocumentSession): raise ValueError("Expected DocumentSession")
+        key = "read_aloud" if include_visual_descriptions else "speech"
+        return self.speech.synthesize_view(session.document["views"][key], default_language=language)
 
     def prepare_question(self, audio_bytes, language="auto"):
         """STT only. Never calls Qwen, speaks, or appends conversation history."""
@@ -93,10 +123,31 @@ class VoiceConversation:
         with session._lock:
             llm_started = time.perf_counter()
             try:
+                checks = {
+                    "question": guardrails.enforce(guardrails.check_question, result["question"]),
+                    "document": guardrails.enforce(guardrails.check_document, session._views["llm_context"]),
+                    "history": guardrails.enforce(guardrails.check_history, session._history, session._views["llm_context"],
+                                                 trusted_instructions=(SYSTEM, STRICT_SYSTEM, guardrails.BOUNDARY))}
+                # Failed upload security checks cannot be lost when rescanning.
+                saved_security = session._views["llm_context"].get("guardrails", {})
+                if saved_security.get("blocked"):
+                    checks["document"] = saved_security
+                blocked = next((c for c in checks.values() if c["blocked"]), None)
+                if blocked:
+                    return self._blocked(result, blocked, session, started)
                 answer = self.llm.answer(deepcopy(session._views["llm_context"]), result["question"],
                                          history=deepcopy(session._history), language=language)
                 if not isinstance(answer.get("answer"), str) or not answer["answer"].strip():
                     raise ValueError("Qwen returned no usable answer")
+                if answer.get("status") == "blocked" or (answer.get("guardrails") or {}).get("blocked"):
+                    return self._blocked(result, answer.get("guardrails") or guardrails.decision("blocked", "qwen_guardrail"), session, started)
+                checks["output"] = guardrails.enforce(guardrails.check_output, answer["answer"], session._views["llm_context"],
+                                                     trusted_instructions=(SYSTEM, STRICT_SYSTEM, guardrails.BOUNDARY))
+                if checks["output"]["blocked"]:
+                    return self._blocked(result, checks["output"], session, started)
+                result["guardrails"] = {**guardrails.decision(
+                    "needs_review" if any(c["needs_review"] for c in checks.values()) else "allowed",
+                    "qa_checks_completed", [r for c in checks.values() for r in c["detected_risks"]]), "checks": checks}
             except Exception as exc:
                 result["errors"].append({"stage": "qwen", "message": str(exc)})
             else:
@@ -122,6 +173,16 @@ class VoiceConversation:
                     result["errors"].append({"stage": "piper", "message": str(exc)})
                 result["timings"]["piper_seconds"] = round(time.perf_counter()-tts_started, 4)
             result["history_turns"] = len(session._history)//2
+        result["timings"]["answer_total_seconds"] = round(time.perf_counter()-started, 4)
+        result["timings"]["total_processing_seconds"] = round(result["timings"]["stt_seconds"] + result["timings"]["answer_total_seconds"], 4)
+        return result
+
+    @staticmethod
+    def _blocked(result, security, session, started):
+        """Return displayable text, with no history turn and no Piper invocation."""
+        result.update(guardrails.refusal(security, result["language"]))
+        result["history_turns"] = len(session._history)//2
+        result["timings"]["qwen_seconds"] = round(time.perf_counter()-started, 4)
         result["timings"]["answer_total_seconds"] = round(time.perf_counter()-started, 4)
         result["timings"]["total_processing_seconds"] = round(result["timings"]["stt_seconds"] + result["timings"]["answer_total_seconds"], 4)
         return result

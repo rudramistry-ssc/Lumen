@@ -17,7 +17,7 @@ class ConversationTests(unittest.TestCase):
                        "regions": [{"id": "R1", "text": "Reopens Tuesday at 9 AM."}]},
                       "speech": {"requires_attention": False}}
         self.original = deepcopy(self.views)
-        self.session = DocumentSession(self.views, records={"ocr": {"untouched": True}})
+        self.session = DocumentSession(self.views, records={"ocr": {"untouched": True}}, allow_legacy_ocr=True)
         self.stt, self.llm, self.speech = Mock(), Mock(), Mock()
         self.stt.transcribe.return_value = {"status": "ok", "text": "At 110?", "language": "fr"}
         self.llm.answer.return_value = {"answer": "Tuesday at 9 AM.", "warnings": [], "verification": "not_performed"}
@@ -68,7 +68,7 @@ class ConversationTests(unittest.TestCase):
 
     def test_uncertainty_reaches_speech_without_technical_fields(self):
         self.views["llm_context"]["numeric_conflicts"] = [{"text": "1,5", "alternatives": ["15"]}]
-        session = DocumentSession(self.views)
+        session = DocumentSession(self.views, allow_legacy_ocr=True)
         self.voice.answer_question(session, "How much?", language="fr")
         args = self.speech.synthesize_segments.call_args
         self.assertTrue(args.kwargs["requires_attention"])

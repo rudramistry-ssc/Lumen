@@ -27,7 +27,7 @@ def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--views", type=Path, default=ROOT/"llm/runtime/example-views.json")
+    parser.add_argument("--views", type=Path, required=True, help="Completed DocumentProcessor document.json; not original OCR views")
     parser.add_argument("--english", type=Path)
     parser.add_argument("--french", type=Path)
     parser.add_argument("--scripted-confirmation", action="store_true", help="Known synthetic questions only; not human review")
@@ -35,6 +35,8 @@ def main():
     parser.add_argument("--port", type=int, default=8091)
     parser.add_argument("--llama-pid", type=int, help="For combined RAM measurement when attaching to an existing server")
     args = parser.parse_args()
+    if "selected_views" not in json.loads(args.views.read_text(encoding="utf-8")):
+        parser.error("Use a completed interpreted document JSON; see handoff/smoke.py for the default upload path")
     if bool(args.english) != bool(args.french): parser.error("Provide both --english and --french")
     if args.scripted_confirmation and args.english: parser.error("Scripted confirmation only accepts generated synthetic fixtures")
     sys.stdout.reconfigure(encoding="utf-8")
@@ -61,12 +63,15 @@ def main():
     with ExitStack() as stack:
         qwen_pid = args.llama_pid
         if args.start_server:
-            server = stack.enter_context(Server(runtime=directory/"server", port=args.port))
+            from signspeak_llm.server import default_model_dir
+            import os
+            projector = os.getenv("SIGNSPEAK_LLM_PROJECTOR", str(default_model_dir()/"mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf"))
+            server = stack.enter_context(Server(runtime=directory/"server", port=args.port, projector=projector, context_size=8192))
             qwen_pid = server.process.pid
             report["qwen_server"] = server.metadata
-            client = LocalLLM(base_url=f"http://127.0.0.1:{args.port}")
+            client = LocalLLM(base_url=f"http://127.0.0.1:{args.port}", context_size=8192)
         else:
-            client = LocalLLM()
+            client = LocalLLM(context_size=8192)
             client.health()
         report["qwen_url"] = client.base_url
         started = time.perf_counter()

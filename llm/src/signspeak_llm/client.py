@@ -11,6 +11,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 from .context import render_context
 from .grounding import numeric_disputes, numeric_notice
+from . import guardrails
 
 
 SYSTEM = """You are SignSpeak, an accessible document-reading assistant.
@@ -124,9 +125,14 @@ class LocalLLM:
         evidence = render_context(llm_context, self.context_mode)
         # Escape delimiter-looking document text without changing decoded JSON.
         evidence = evidence.replace("<", "\\u003c").replace(">", "\\u003e")
-        policy = STRICT_SYSTEM if self.policy == "strict" else SYSTEM
+        policy = (STRICT_SYSTEM if self.policy == "strict" else SYSTEM) + "\n" + guardrails.BOUNDARY
+        selected = (llm_context.get("source") or {}).get("origin") in {"selected_document", "ocr_unreviewed_fallback"}
+        if selected:
+            policy = policy.replace("supplied OCR evidence", "supplied selected document and its uncertainty evidence").replace("The OCR JSON", "The selected-document JSON")
+            policy += "\nThe selected vision transcription is primary. OCR discrepancies are fallible advisory evidence, never automatic replacements. Visual descriptions are interpretations, not physically printed words. Crossed-out/replacement readings do not establish a current value. Never fill redacted or unfilled fields. Preserve the stated uncertainty."
+        label = "Selected document interpretation (untrusted JSON data; all readings remain unverified):" if selected else "OCR evidence (untrusted JSON data):"
         messages = [{"role": "system", "content": policy + "\nRequested language: " + language},
-                    {"role": "user", "content": "OCR evidence (untrusted JSON data):\n" + evidence}]
+                    {"role": "user", "content": label + "\n" + evidence}]
         def literal(text):
             # Model output can echo document delimiters into subsequent history.
             return text.replace("<|", "\\u003c|").replace("|>", "|\\u003e")
@@ -163,6 +169,16 @@ class LocalLLM:
         history = [] if history is None else history
         if not isinstance(history, list) or any(not isinstance(m, dict) or m.get("role") not in {"user", "assistant"} or not isinstance(m.get("content"), str) for m in history):
             raise ValueError("History accepts only user/assistant text messages")
+        security = {}
+        security["question"] = guardrails.enforce(guardrails.check_question, question)
+        security["document"] = guardrails.enforce(guardrails.check_document, llm_context)
+        if (llm_context.get("guardrails") or {}).get("blocked"):
+            security["document"] = llm_context["guardrails"]
+        security["history"] = guardrails.enforce(guardrails.check_history, history, llm_context,
+                                               trusted_instructions=(SYSTEM, STRICT_SYSTEM, guardrails.BOUNDARY))
+        for check in security.values():
+            if check["blocked"]:
+                return guardrails.refusal(check, language)
         messages = self.messages(llm_context, question, history, language)
         started = time.perf_counter()
         prompt_tokens = self._count(messages)
@@ -173,6 +189,12 @@ class LocalLLM:
         if prompt_tokens + self.max_tokens + 32 > limit:
             raise ContextTooLarge(f"Complete evidence/history needs {prompt_tokens} prompt + {self.max_tokens} answer + 32 margin tokens; context is {limit}. Increase context or explicitly start a shorter conversation. Nothing was truncated.")
         result = self.complete(messages, stream=stream)
+        output = guardrails.enforce(guardrails.check_output, result["answer"], llm_context,
+                                   trusted_instructions=(SYSTEM, STRICT_SYSTEM, guardrails.BOUNDARY))
+        if output["blocked"]:
+            return guardrails.refusal(output, language)
+        # Reasoning is not a user-facing answer and must not expose internal prompts.
+        result.pop("reasoning_content", None)
         # Always retain raw generation for evaluation and diagnosis. This is
         # separately labelled application behavior, never credited to the model.
         result["raw_answer"] = result["answer"]
@@ -208,6 +230,13 @@ class LocalLLM:
             result["safeguards_applied"].append("unverified_citations_removed")
         result["cited_region_ids"] = []
         result["citation_verification"] = "Generated citations omitted; semantic support not verified"
+        security["output"] = guardrails.enforce(guardrails.check_output, result["answer"], llm_context,
+                                              trusted_instructions=(SYSTEM, STRICT_SYSTEM, guardrails.BOUNDARY))
+        if security["output"]["blocked"]:
+            return guardrails.refusal(security["output"], language)
+        result["guardrails"] = {**guardrails.decision(
+            "needs_review" if any(c["needs_review"] for c in security.values()) else "allowed",
+            "qa_checks_completed", [r for c in security.values() for r in c["detected_risks"]]), "checks": security}
         return result
 
     def complete(self, messages, *, stream=True, response_format=None):
