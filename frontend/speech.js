@@ -6,14 +6,22 @@
   const synth = window.speechSynthesis;
   const LOCALES = { en: ["en-CA", "en-US", "en-GB", "en"], fr: ["fr-CA", "fr-FR", "fr"] };
 
-  function pickVoice(lang) {
-    if (!synth) return null;
+  function voicesFor(lang) {
+    if (!synth) return [];
     const voices = synth.getVoices();
     for (const loc of LOCALES[lang] || LOCALES.en) {
-      const v = voices.find((x) => x.lang.toLowerCase().startsWith(loc.toLowerCase()));
-      if (v) return v;
+      const match = voices.filter((x) => x.lang.toLowerCase().startsWith(loc.toLowerCase()));
+      if (match.length) return match;
     }
-    return null;
+    return [];
+  }
+
+  // Chrome and Edge list cloud voices next to local ones. Cloud voices are
+  // silent without internet, so always prefer a voice installed on the
+  // computer; fall back to a cloud voice only when we are online.
+  function pickVoice(lang) {
+    const match = voicesFor(lang);
+    return match.find((v) => v.localService) || (navigator.onLine ? match[0] : null) || null;
   }
 
   // Split mixed text into chunks by guessed language, so each part is read
@@ -50,6 +58,8 @@
     canRecord: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder),
 
     hasVoice: (lang) => !!pickVoice(lang),
+    // True only for voices that work without internet.
+    hasLocalVoice: (lang) => voicesFor(lang).some((v) => v.localService),
 
     speak(text, lang, { rate = 1, onStart, onEnd, onBoundary } = {}) {
       if (!synth) return;

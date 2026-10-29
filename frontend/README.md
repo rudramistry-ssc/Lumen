@@ -127,7 +127,7 @@ This bundles everything into `dist/lumen.html`, a single file you can send to an
 
 ## Known limits
 
-- **Read aloud uses the voices installed on the computer.** If no French voice is installed, a default voice is used and the UI says so. On Windows: Settings → Time & language → Speech → Add voices → French (Canada). On macOS: System Settings → Accessibility → Spoken Content → System voice → Manage voices.
+- **Read aloud uses the voices installed on the computer.** Chrome and Edge also list cloud voices; the app prefers local ones, so English works offline. If no local voice exists for the language, the text may stay silent and the UI says so. On Windows: Settings → Time & language → Language & region → Add a language → French (Canada) → check **Speech**. On macOS: System Settings → Accessibility → Spoken Content → System voice → Manage voices.
 - **Word highlighting** needs the computer's built-in voices. Some online voices in Chrome don't report word positions, so the text shows without highlighting.
 - **Voice input records offline but does not transcribe yet.** The mic button records with `MediaRecorder` (no cloud call) and uploads the clip to `POST /v1/sessions/{id}/audio`; the backend stores it and the UI plays it back. Turning the clip into text needs `/v1/stt` in the AI service. Browsers without `MediaRecorder` fall back to the online speech API; if neither is available, the UI shows a message instead.
 - **Fonts** load from Google Fonts when online and fall back to system fonts offline.

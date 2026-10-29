@@ -183,7 +183,7 @@
 
   function warnIfNoVoice() {
     const need = state.language === "mixed" ? ["en", "fr"] : [state.language];
-    const missing = need.filter((l) => Speech.supported && speechSynthesis.getVoices().length && !Speech.hasVoice(l));
+    const missing = need.filter((l) => Speech.supported && speechSynthesis.getVoices().length && !Speech.hasLocalVoice(l));
     if (missing.length) $("extract-hint").textContent = t("noVoice", { lang: missing.map(langName).join(" / ") });
   }
 
