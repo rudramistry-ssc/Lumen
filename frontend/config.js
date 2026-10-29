@@ -12,7 +12,7 @@ window.APP_CONFIG = {
 
   // "" means same origin (FastAPI serves this folder).
   // Use e.g. "http://127.0.0.1:8000" if the frontend is opened separately.
-  API_BASE_URL: "http://127.0.0.1:8000",
+  API_BASE_URL: "",
 
   // Biggest image we send, in MB
   MAX_IMAGE_MB: 10,

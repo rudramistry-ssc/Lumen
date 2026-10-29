@@ -15,30 +15,37 @@
   }
 
   // ---------- real backend ----------
-  const real = {
-    health: () => request("/api/health"),
+  // The backend owns sessions: create one per UI session, then upload and chat
+  // against that id. app.js only knows its own short client-side id.
+  const backendSessions = new Map(); // client session id -> backend session id
 
-    // -> { text, language: "en"|"fr"|"mixed", confidence?: 0..1 }
-    extract(file, sessionId) {
+  async function backendSessionId(clientId) {
+    if (!backendSessions.has(clientId)) {
+      const created = await request("/v1/sessions", { method: "POST" });
+      backendSessions.set(clientId, created.session_id);
+    }
+    return backendSessions.get(clientId);
+  }
+
+  const real = {
+    health: () => request("/healthz"),
+
+    // -> { session_id, text, language: "en"|"fr"|"mixed", audio_url, ms }
+    async extract(file, sessionId) {
+      const id = await backendSessionId(sessionId);
       const form = new FormData();
-      form.append("image", file);
-      form.append("session_id", sessionId);
-      return request("/api/extract", { method: "POST", body: form });
+      form.append("file", file); // backend expects the field name "file"
+      return request(`/v1/sessions/${id}/images`, { method: "POST", body: form });
     },
 
-    // -> { reply, language }
-    chat({ sessionId, message, contextText, language, history }) {
-      return request("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: sessionId,
-          message,
-          context_text: contextText,
-          language,
-          history, // [{ role: "user"|"assistant", content }]
-        }),
-      });
+    // -> { transcript, reply, audio_url }
+    // The backend stores the scan text and the chat history itself, so
+    // contextText / language / history from app.js are not sent.
+    async chat({ sessionId, message }) {
+      const id = await backendSessionId(sessionId);
+      const form = new FormData();
+      form.append("message", message); // backend chat takes a form field, not JSON
+      return request(`/v1/sessions/${id}/chat`, { method: "POST", body: form });
     },
   };
 

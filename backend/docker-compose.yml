@@ -13,8 +13,10 @@ services:
       AI_TIMEOUT_SECONDS: "120"     # OCR + TTS can be slow
       CORS_ORIGINS: "*"
       TTS_ENABLED: "false"          # flip to "true" once the AI service has /v1/tts
+      FRONTEND_DIR: /frontend       # static UI, served at /
     volumes:
       - appdata:/data               # sqlite + generated mp3s
+      - ../frontend:/frontend:ro    # live UI edits, no rebuild needed
     depends_on:
       - ai
     restart: unless-stopped

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     db_path: str = "data/app.db"
     media_dir: str = "data/media"
 
+    # Static UI folder, served at "/" so browser and API share one origin.
+    # Compose mounts ../frontend at /frontend and sets FRONTEND_DIR.
+    frontend_dir: str = "../frontend"
+
     # "*" allows any origin; set a comma-separated list for the real frontend.
     cors_origins: str = "*"
     max_upload_mb: int = 15
