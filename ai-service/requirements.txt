@@ -1,0 +1,12 @@
+# Web framework + ASGI server
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# Multipart uploads (images) and env-based settings
+python-multipart>=0.0.9
+pydantic-settings>=2.4
+
+# Calls the local language model (Ollama / vLLM)
+httpx>=0.27
+
+# The OCR package (../ocr) is installed by the root requirements.txt
