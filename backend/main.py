@@ -50,6 +50,7 @@ def root():
 
 
 @app.get("/healthz")
+@app.get("/health")
 def healthz():
-    # Used by Docker/compose to know the API is up.
+    # /health is an alias for external pollers that don't use /healthz.
     return {"status": "ok"}
