@@ -1,28 +1,52 @@
-# `docker compose up --build` starts the API plus the OCR service (../ocr).
-# For now the OCR service only offers /v1/ocr; TTS, STT and chat come later.
+# `docker compose up --build` starts the whole app:
+#   web  frontend      http://localhost:5500
+#   api  backend       http://localhost:8000  (docs at /docs)
+#   ai   AI service    internal only: OCR (Tesseract inside), chat, TTS
+# Chat needs Ollama running on the host computer (see the root README).
 
 services:
   api:
     build: .
     ports:
-      - "8000:8000"                 # the only port the browser/laptop needs
+      - "8000:8000"                 # the browser calls this
     environment:
       DB_PATH: /data/app.db         # inside the volume, survives restarts
       MEDIA_DIR: /data/media
       AI_BASE_URL: http://ai:8000   # compose service name, NOT localhost
       AI_TIMEOUT_SECONDS: "120"     # OCR + TTS can be slow
       CORS_ORIGINS: "*"
-      TTS_ENABLED: "false"          # flip to "true" once the AI service has /v1/tts
+      TTS_ENABLED: "true"           # the AI service has /v1/tts (espeak-ng in Docker)
     volumes:
-      - appdata:/data               # sqlite + generated mp3s
+      - appdata:/data               # sqlite + generated audio
     depends_on:
       - ai
     restart: unless-stopped
 
   ai:
-    build: ../ocr                   # Tesseract + the OCR web wrapper
+    # ai-service/ plus the team's OCR package; built from the repo root.
+    build:
+      context: ..
+      dockerfile: ai-service/Dockerfile
+    environment:
+      # Ollama runs on the host, not in Docker. Override for vLLM on the HPC node.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2:3b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # needed on Linux; harmless elsewhere
     expose:
       - "8000"                      # internal only, no host port needed
+    restart: unless-stopped
+
+  web:
+    # Static files only; same as `python -m http.server` in frontend/.
+    image: python:3.12-slim
+    command: ["python", "-m", "http.server", "5500", "--directory", "/frontend"]
+    ports:
+      - "5500:5500"
+    volumes:
+      - ../frontend:/frontend:ro
+    depends_on:
+      - api
 
 volumes:
   appdata:

@@ -1,0 +1,10 @@
+# Build context for ai-service/Dockerfile is the repository root.
+.git/
+.venv/
+**/__pycache__/
+**/*.egg-info/
+**/.env
+frontend/
+backend/
+ocr/eval/
+ocr/.venv/

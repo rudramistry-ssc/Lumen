@@ -9,6 +9,7 @@ Works on macOS and Windows. Run it with the project's virtual environment
 """
 
 import argparse
+import functools
 import json
 import os
 import shutil
@@ -22,6 +23,7 @@ import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+print = functools.partial(print, flush=True)  # show progress at once, even through a pipe
 HOST = "127.0.0.1"
 PORTS = {"ai": 9000, "backend": 8000, "frontend": 5500}
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
