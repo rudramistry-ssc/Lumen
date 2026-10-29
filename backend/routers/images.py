@@ -41,7 +41,7 @@ async def upload_image(session_id: str, file: UploadFile):
     # session's document. An empty audio_url means "text only".
     audio_url = ""
     if get_settings().tts_enabled:
-        audio = await ai_client.tts(text)
+        audio = await ai_client.tts(text, language)
         audio_url = f"/v1/media/{storage_service.save_audio(audio)}"
     session_service.set_session_scan(session_id, text, language)
 
@@ -49,6 +49,7 @@ async def upload_image(session_id: str, file: UploadFile):
         "session_id": session_id,
         "text": text,
         "language": language,
+        "confidence": result.get("confidence"),
         "audio_url": audio_url,
         "ms": int((time.perf_counter() - started) * 1000),
     }
@@ -62,6 +63,6 @@ def get_media(name: str):
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(
         path,
-        media_type="audio/mpeg",
+        media_type=storage_service.media_type(path),
         headers={"Cache-Control": "public, max-age=86400"},
     )

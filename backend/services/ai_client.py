@@ -1,10 +1,10 @@
 """The only file that knows the AI service's URL and endpoints.
 
 Contract:
-  POST /v1/ocr   multipart file                -> { "text": ... }
-  POST /v1/tts   { text, voice }               -> audio/mpeg bytes
-  POST /v1/stt   multipart file                -> { "text": ... }
-  POST /v1/reply { message, context, history } -> { "reply": ... }
+  POST /v1/ocr   multipart file                           -> { "text", "language", "confidence"? }
+  POST /v1/tts   { text, voice, language }                -> audio/mpeg or audio/wav bytes
+  POST /v1/stt   multipart file                           -> { "text": ... }
+  POST /v1/reply { message, context, history, language }  -> { "reply": ... }
 """
 
 import httpx
@@ -26,9 +26,17 @@ def _map_error(exc: Exception) -> HTTPException:
     if isinstance(exc, httpx.TimeoutException):
         return HTTPException(status_code=504, detail="AI service timed out")
     if isinstance(exc, httpx.HTTPStatusError):
+        # Pass the AI service's own reason through, e.g. "model not downloaded".
+        try:
+            reason = exc.response.json().get("detail")
+        except ValueError:
+            reason = None
+        if isinstance(reason, list) and reason and isinstance(reason[0], dict):
+            reason = reason[0].get("message")  # OCR sends a list of {stage, code, message}
+        suffix = f": {reason}" if isinstance(reason, str) else ""
         return HTTPException(
             status_code=502,
-            detail=f"AI service error ({exc.response.status_code})",
+            detail=f"AI service error ({exc.response.status_code}){suffix}",
         )
     return HTTPException(status_code=503, detail="AI service unreachable")
 
@@ -47,13 +55,13 @@ async def ocr(data: bytes, filename: str, content_type: str) -> dict:
         raise _map_error(exc) from exc
 
 
-async def tts(text: str) -> bytes:
-    # Text in, mp3 bytes out. The voice is configured once in config.py.
+async def tts(text: str, language: str = "en") -> bytes:
+    # Text in, audio bytes out. `language` lets the AI side pick a French voice.
     try:
         async with _client() as client:
             response = await client.post(
                 "/v1/tts",
-                json={"text": text, "voice": get_settings().tts_voice},
+                json={"text": text, "voice": get_settings().tts_voice, "language": language},
             )
             response.raise_for_status()
             return response.content
@@ -75,13 +83,14 @@ async def stt(data: bytes, filename: str, content_type: str) -> str:
         raise _map_error(exc) from exc
 
 
-async def reply(message: str, context: str, history: list[dict]) -> str:
-    # context = OCR text from the scan, history = earlier chat turns.
+async def reply(message: str, context: str, history: list[dict], language: str = "en") -> str:
+    # context = OCR text from the scan, history = earlier chat turns,
+    # language = the language the answer should be written in.
     try:
         async with _client() as client:
             response = await client.post(
                 "/v1/reply",
-                json={"message": message, "context": context, "history": history},
+                json={"message": message, "context": context, "history": history, "language": language},
             )
             response.raise_for_status()
             return (response.json().get("reply") or "").strip()
