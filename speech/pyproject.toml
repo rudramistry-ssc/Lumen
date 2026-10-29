@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signspeak-speech"
+version = "0.1.0"
+description = "Offline English/French Piper read-aloud for SignSpeak"
+requires-python = ">=3.11"
+dependencies = ["piper-tts==1.8.0", "onnxruntime==1.31.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+signspeak_speech = ["voices.json"]

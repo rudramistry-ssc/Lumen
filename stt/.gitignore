@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.prep/
+runtime/
+models/
+recordings/
+*.bin
+*.exe
+*.dll
+*.zip
+*.wav
+*.webm
+*.part
+*.tmp
+eval/results-*.json

@@ -1,0 +1,13 @@
+{
+  "description": "Phase 3 artifacts preserved before Phase 3.1 changes. Run root llm/benchmark.py with this src first on PYTHONPATH to reproduce the legacy implementation.",
+  "sha256": {
+    "benchmark.py": "61dba9a35414ecd681d910484a113eb5cc3e993517617984071a67a3a3ede93a",
+    "README.md": "e72bc0591c635097a7d6a76ef12199a072e529d32562b01a795d42b9541f86b8",
+    "results.json": "afdd4dead9f47125fb09abb514c15e9d31ff151bec15815d941cb16c5daadb89",
+    "RESULTS.md": "aa33d9380c53daf0a18d356ba71a8a46a529869dfbb64939c2c3d98c0ca7fffa",
+    "src/signspeak_llm/__init__.py": "5d82ecb0163205d1d00b2f62dc881c8a0088db58e095279560314e6848ce6c37",
+    "src/signspeak_llm/__main__.py": "9a1643dcabd68f4d96f187246bdfcca9b299562ebd2dfec78bb6b84d15661a42",
+    "src/signspeak_llm/client.py": "5d2c627d1b046390948fcd57a79c6c33a55655cb6949dcff5a91d1b5cab1d32a",
+    "src/signspeak_llm/server.py": "e51b8b89eec44db7bc1a8ed2ce68f4d599c6296b754764213c087ca9a5f86dcb"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "runtime": {
+    "tag": "b5454",
+    "version": "1.9.5",
+    "commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+    "filename": "whisper-bin-x64.zip",
+    "bytes": 8928640,
+    "sha256": "6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb",
+    "url": "https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip",
+    "license": "MIT"
+  },
+  "model": {
+    "repository": "ggerganov/whisper.cpp",
+    "revision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+    "filename": "ggml-base.bin",
+    "bytes": 147951465,
+    "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+    "license": "MIT"
+  },
+  "runtime_license_url": "https://github.com/ggml-org/whisper.cpp/blob/v1.9.5/LICENSE",
+  "model_license_url": "https://github.com/openai/whisper/blob/main/LICENSE",
+  "model_card_url": "https://huggingface.co/ggerganov/whisper.cpp/blob/5359861c739e955e79d9a303bcbc70fb988958b1/README.md",
+  "source_build_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+}
