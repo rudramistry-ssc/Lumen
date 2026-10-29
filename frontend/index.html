@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lumen · CanAI Garage</title>
+  <!-- Inter + Geist Mono. Offline, the page falls back to system fonts. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="intro.css">
+</head>
+<body class="show-intro">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="leaf" viewBox="0 0 100 100">
+      <path d="M50 4 L57 17 L63.5 13.5 L60.5 33 L71.5 22.5 L74.5 29.5 L87 27 L81.5 40.5 L91 45 L71 58.5 L74 66 L55 62.5 L52 62.5 L52 84 L48 84 L48 62.5 L45 62.5 L26 66 L29 58.5 L9 45 L18.5 40.5 L13 27 L25.5 29.5 L28.5 22.5 L39.5 33 L36.5 13.5 L43 17 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+    </symbol>
+  </svg>
+
+  <!-- ===================== LANDING ===================== -->
+  <div id="intro" class="landing">
+    <a class="announce" href="#how" data-scroll="how">
+      <span data-i18n="announce">Built at CanAI Garage 2026 by Team E</span>
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    </a>
+
+    <nav class="l-nav" aria-label="Main">
+      <div class="l-nav-inner">
+        <a class="logo" href="#top" data-scroll="top">
+          <span class="logo-box"><svg><use href="#leaf"/></svg></span>
+          <span class="logo-word app-name">Lumen</span>
+        </a>
+        <div class="l-links">
+          <a href="#how" data-scroll="how" data-i18n="navHow">How it works</a>
+          <a href="#private" data-scroll="private" data-i18n="navPrivate">Privacy</a>
+          <a href="#stack" data-scroll="stack" data-i18n="navStack">Stack</a>
+        </div>
+        <div class="l-nav-right">
+          <div class="seg seg-dark" role="group" aria-label="Language / Langue">
+            <button type="button" class="seg-btn" data-ui-lang="en" lang="en">EN</button>
+            <button type="button" class="seg-btn" data-ui-lang="fr" lang="fr">FR</button>
+          </div>
+          <button type="button" class="pill pill-white pill-sm" data-launch data-i18n="navLaunch">Open app</button>
+        </div>
+      </div>
+    </nav>
+
+    <header id="top" class="hero">
+      <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
+      <div class="hero-fade" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <p class="eyebrow"><span class="tri" aria-hidden="true"></span><span>CanAI Garage</span><span class="dim">/</span><span data-i18n="team">Team E</span></p>
+        <h1 class="hero-title">
+          <span class="hl" data-i18n="heroA">Point at any sign.</span>
+          <span class="hl hl-2" data-i18n="heroB">Hear it in English or French.</span>
+        </h1>
+        <p class="hero-sub" data-i18n="heroSub">Lumen reads the text in a photo, finds its language, speaks it aloud, and answers your questions about it. It runs on a local AI model.</p>
+        <div class="hero-cta">
+          <button type="button" id="launch-btn" class="pill pill-white" data-launch data-i18n="ctaLaunch">Try the demo</button>
+          <a class="pill pill-ghost" href="#how" data-scroll="how" data-i18n="ctaHow">How it works</a>
+        </div>
+      </div>
+    </header>
+
+    <div id="stack" class="strip" aria-label="Built with">
+      <div class="strip-track">
+        <span>vLLM</span><span>FastAPI</span><span>HPC GPU node</span><span>Docker</span><span>Web Speech API</span><span>OCR</span><span>Local LLM</span>
+        <span aria-hidden="true">vLLM</span><span aria-hidden="true">FastAPI</span><span aria-hidden="true">HPC GPU node</span><span aria-hidden="true">Docker</span><span aria-hidden="true">Web Speech API</span><span aria-hidden="true">OCR</span><span aria-hidden="true">Local LLM</span>
+      </div>
+    </div>
+
+    <!-- 01 -->
+    <section id="how" class="block">
+      <div class="block-side">
+        <p class="eyebrow"><span class="tri" aria-hidden="true"></span><span data-i18n="s1Label">Read the sign</span></p>
+        <p class="big-num" aria-hidden="true">01</p>
+      </div>
+      <div class="block-main">
+        <h2 class="block-title"><span class="hl" data-i18n="s1A">Snap it, and it's text.</span> <span class="hl-2" data-i18n="s1B">Upload or paste a photo of a poster, notice or sign. Lumen pulls out every line and shows it so you can fix mistakes before listening.</span></h2>
+        <div class="tiles">
+          <article class="tile">
+            <h3><b data-i18n="t1t">Scanning.</b> <span data-i18n="t1">Reads printed text from real-world photos.</span></h3>
+            <div class="mock mock-scan" aria-hidden="true">
+              <div class="mock-bar"><span class="dot"></span><span data-i18n="mScan">Scanning…</span><span class="mono-dim">3/5 lines</span></div>
+              <div class="scan-grid" id="scan-grid"></div>
+            </div>
+          </article>
+          <article class="tile">
+            <h3><b data-i18n="t2t">Language.</b> <span data-i18n="t2">Tells English from French, even on bilingual signs.</span></h3>
+            <div class="mock mock-lang" aria-hidden="true">
+              <div class="lang-row"><span>FR</span><div class="lang-track"><i style="--w:94%"></i></div><span class="mono-dim">94%</span></div>
+              <div class="lang-row"><span>EN</span><div class="lang-track"><i style="--w:6%"></i></div><span class="mono-dim">6%</span></div>
+              <div class="mock-foot"><span class="dot"></span>language: "fr"</div>
+            </div>
+          </article>
+          <article class="tile">
+            <h3><b data-i18n="t3t">Check.</b> <span data-i18n="t3">Edit the text before it's read aloud.</span></h3>
+            <div class="mock mock-text" aria-hidden="true">
+              <p>AVIS</p><p>Ascenseur hors service<span class="caret"></span></p><p class="mono-dim">Veuillez utiliser l'escalier…</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="block">
+      <div class="block-side">
+        <p class="eyebrow"><span class="tri" aria-hidden="true"></span><span data-i18n="s2Label">Hear it, ask it</span></p>
+        <p class="big-num" aria-hidden="true">02</p>
+      </div>
+      <div class="block-main">
+        <h2 class="block-title"><span class="hl" data-i18n="s2A">Listen, then ask.</span> <span class="hl-2" data-i18n="s2B">It reads in a matching English or French voice and highlights each word. Then ask follow-up questions by typing or speaking, in your own language.</span></h2>
+        <div class="tiles tiles-2">
+          <article class="tile">
+            <h3><b data-i18n="t4t">Read aloud.</b> <span data-i18n="t4">Word-by-word highlighting, adjustable speed.</span></h3>
+            <div class="mock mock-wave" aria-hidden="true">
+              <p class="wave-text"><span>Elevator</span> <span>out</span> <span class="now">of</span> <span class="later">service.</span></p>
+              <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="mock-foot"><span class="dot"></span>voice: fr-CA · 1.0×</div>
+            </div>
+          </article>
+          <article class="tile">
+            <h3><b data-i18n="t5t">Conversation.</b> <span data-i18n="t5">Keeps the context of the sign across questions.</span></h3>
+            <div class="mock mock-chat" aria-hidden="true">
+              <p class="q" data-i18n="mQ">What should I do?</p>
+              <p class="a" data-i18n="mA">When the alarm rings, leave by the nearest stairs. Don't take the elevator.</p>
+              <div class="mock-foot"><span class="dot"></span>POST /api/chat</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section id="private" class="block">
+      <div class="block-side">
+        <p class="eyebrow"><span class="tri" aria-hidden="true"></span><span data-i18n="s3Label">Private by design</span></p>
+        <p class="big-num" aria-hidden="true">03</p>
+      </div>
+      <div class="block-main">
+        <h2 class="block-title"><span class="hl" data-i18n="s3A">Your photos stay with you.</span> <span class="hl-2" data-i18n="s3B">The model runs on our own GPU node, not a public cloud API, so it can be used with sensitive images inside a government network.</span></h2>
+        <div class="callout">
+          <p class="callout-big" data-i18n="calloutBig">Built for accessibility</p>
+          <p class="callout-small" data-i18n="calloutSmall">For people with low vision, reading difficulties, or who don't read the sign's language.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="final">
+      <h2 class="final-title"><span class="app-name">Lumen</span><span class="final-dot">.</span></h2>
+      <p class="final-sub" data-i18n="finalSub">Three sample signs are ready to try. No setup needed.</p>
+      <button type="button" class="pill pill-white" data-launch data-i18n="ctaLaunch">Try the demo</button>
+    </section>
+
+    <footer class="l-foot">
+      <span class="logo-box logo-box-sm"><svg><use href="#leaf"/></svg></span>
+      <span>CanAI Garage · <span data-i18n="team">Team E</span></span>
+    </footer>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div id="app" class="app">
+    <a class="skip-link" href="#chat-input" data-i18n="skipToChat">Skip to chat</a>
+
+    <header class="topbar">
+      <button type="button" id="brand-home" class="brand" data-i18n-aria="backToIntro">
+        <span class="logo-box"><svg><use href="#leaf"/></svg></span>
+        <span class="brand-text">
+          <span class="brand-name app-name">Lumen</span>
+          <span class="brand-tag">CanAI Garage · <span data-i18n="team">Team E</span></span>
+        </span>
+      </button>
+
+      <div class="topbar-controls">
+        <span id="backend-status" class="status-pill" role="status"></span>
+        <div class="seg seg-dark" role="group" aria-label="Interface language">
+          <button type="button" class="seg-btn" data-ui-lang="en" lang="en">EN</button>
+          <button type="button" class="seg-btn" data-ui-lang="fr" lang="fr">FR</button>
+        </div>
+        <div class="seg seg-dark" role="group" data-i18n-aria="textSize">
+          <button type="button" id="text-smaller" class="seg-btn" data-i18n-aria="smallerText">A−</button>
+          <button type="button" id="text-larger" class="seg-btn" data-i18n-aria="largerText">A+</button>
+        </div>
+        <button type="button" id="new-session" class="pill pill-ghost pill-sm" data-i18n="newSession">New session</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- LEFT -->
+      <section class="panel panel-source" aria-labelledby="source-heading">
+        <div class="panel-head">
+          <p class="eyebrow"><span class="step">01</span><span id="source-heading" data-i18n="step1">Add a photo</span></p>
+        </div>
+
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" data-i18n-aria="dropzoneAria">
+          <input id="file-input" type="file" accept="image/*" capture="environment" hidden>
+          <div id="drop-empty" class="drop-empty">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 14V8a2 2 0 0 1 2-2h6M34 6h6a2 2 0 0 1 2 2v6M42 34v6a2 2 0 0 1-2 2h-6M14 42H8a2 2 0 0 1-2-2v-6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 20h20M14 26h20M14 32h12" stroke="currentColor" stroke-width="2"/></svg>
+            <p class="drop-title" data-i18n="dropTitle">Drop a photo of a sign, poster or notice</p>
+            <p class="drop-sub" data-i18n="dropSub">or click to choose a file · you can also paste an image</p>
+          </div>
+          <img id="preview" class="preview" alt="" hidden>
+        </div>
+        <div id="image-actions" class="row-actions" hidden>
+          <span id="file-name" class="file-name"></span>
+          <button type="button" id="replace-image" class="pill pill-ghost pill-sm" data-i18n="replaceImage">Replace photo</button>
+        </div>
+        <div class="samples" role="group" aria-labelledby="samples-label">
+          <span id="samples-label" class="mono-label" data-i18n="trySample">No photo handy? Try a sample</span>
+          <div class="samples-row">
+            <button type="button" class="sample" data-sample="en"><img alt=""><span data-i18n="sampleEn">English notice</span></button>
+            <button type="button" class="sample" data-sample="fr"><img alt=""><span data-i18n="sampleFr">French notice</span></button>
+            <button type="button" class="sample" data-sample="mixed"><img alt=""><span data-i18n="sampleMixed">Bilingual sign</span></button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div id="extract-card" class="extract-card" data-state="empty">
+          <div class="panel-head">
+            <p class="eyebrow"><span class="step">02</span><span data-i18n="step2">Check the text</span></p>
+          </div>
+          <div class="extract-head">
+            <label for="lang-select" class="mono-label" data-i18n="detected">Detected language</label>
+            <select id="lang-select" class="lang-select" disabled>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="mixed" data-i18n="mixed">English + French</option>
+            </select>
+            <span id="confidence" class="confidence"></span>
+            <button type="button" id="copy-btn" class="pill pill-ghost pill-sm copy-btn" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span id="copy-label" data-i18n="copy">Copy</span>
+            </button>
+          </div>
+
+          <ol id="extract-loading" class="stages" hidden aria-live="polite">
+            <li data-stage="0"><span class="stage-dot" aria-hidden="true"></span><span data-i18n="stageUpload">Sending photo</span></li>
+            <li data-stage="1"><span class="stage-dot" aria-hidden="true"></span><span data-i18n="stageRead">Reading the text</span></li>
+            <li data-stage="2"><span class="stage-dot" aria-hidden="true"></span><span data-i18n="stageLang">Detecting the language</span></li>
+          </ol>
+          <label for="extracted-text" class="visually-hidden" data-i18n="extractedText">Extracted text</label>
+          <textarea id="extracted-text" class="extracted-text" rows="6" disabled data-i18n-placeholder="textPlaceholder"></textarea>
+          <div id="reading-view" class="extracted-text reading-view" hidden aria-hidden="true"></div>
+          <p id="extract-hint" class="hint" data-i18n="editHint">You can fix any mistakes before listening.</p>
+          <p id="extract-error" class="error" role="alert" hidden></p>
+
+          <div class="divider"></div>
+
+          <div class="panel-head">
+            <p class="eyebrow"><span class="step">03</span><span data-i18n="step3">Listen</span></p>
+          </div>
+          <div class="player">
+            <button type="button" id="play-btn" class="pill pill-white pill-lg" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
+              <span id="play-label" data-i18n="readAloud">Read aloud</span>
+              <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            </button>
+            <button type="button" id="stop-btn" class="pill pill-ghost" disabled data-i18n="stop">Stop</button>
+            <div class="rate">
+              <label for="rate" class="mono-label" data-i18n="speed">Speed</label>
+              <input id="rate" type="range" min="0.6" max="1.6" step="0.1" value="1">
+              <output id="rate-out" for="rate">1.0×</output>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <section class="panel panel-chat" aria-labelledby="chat-heading">
+        <div class="panel-head chat-head">
+          <p class="eyebrow"><span class="step">04</span><span id="chat-heading" data-i18n="step4">Ask about it</span></p>
+          <label class="switch">
+            <input type="checkbox" id="auto-read" checked>
+            <span data-i18n="autoRead">Read replies aloud</span>
+          </label>
+        </div>
+
+        <ol id="messages" class="messages" aria-live="polite" aria-relevant="additions"></ol>
+
+        <div id="suggestions" class="suggestions" role="group" data-i18n-aria="suggestions" hidden>
+          <button type="button" class="chip" data-ask="askSummary" data-i18n="askSummary">Summarize it</button>
+          <button type="button" class="chip" data-ask="askTodo" data-i18n="askTodo">What should I do?</button>
+          <button type="button" class="chip" data-ask="askWhen" data-i18n="askWhen">When is it?</button>
+          <button type="button" class="chip" data-ask="askTranslate" data-i18n="askTranslate">Translate it</button>
+        </div>
+
+        <form id="chat-form" class="composer" autocomplete="off">
+          <button type="button" id="mic-btn" class="icon-btn mic-btn" data-i18n-aria="voiceInput">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <label for="chat-input" class="visually-hidden" data-i18n="chatLabel">Your question</label>
+          <textarea id="chat-input" class="chat-input" rows="1" data-i18n-placeholder="chatPlaceholder"></textarea>
+          <button type="submit" id="send-btn" class="pill pill-white pill-sm" data-i18n="send">Send</button>
+        </form>
+        <p id="mic-note" class="hint mic-note" hidden></p>
+      </section>
+    </main>
+
+    <p class="footer-note"><span data-i18n="footer">Runs on a local AI model. Your images stay on your network.</span> <span id="session-label"></span></p>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="samples.js"></script>
+  <script src="i18n.js"></script>
+  <script src="api.js"></script>
+  <script src="speech.js"></script>
+  <script src="app.js"></script>
+  <script src="intro.js"></script>
+</body>
+</html>

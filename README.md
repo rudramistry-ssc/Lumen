@@ -1,6 +1,12 @@
 # CanAI Team E
 
-Turn a picture of text into readable text (and, later, speech).
+Turn a picture of text into readable text (and, later, speech). The web frontend for this is called **Lumen**.
+
+| folder       | what it is                                  | how to run                                   |
+|--------------|---------------------------------------------|----------------------------------------------|
+| `frontend/`  | the web UI (plain HTML/CSS/JS)              | see [frontend/README.md](frontend/README.md) |
+| `backend/`   | FastAPI API: sessions, uploads, chat        | see [backend/README.md](backend/README.md)   |
+| `ocr/`       | OCR service (`signspeak_ocr`, Tesseract)    | internal, started by Docker                  |
 
 ## Architecture
 
@@ -35,6 +41,15 @@ docker compose up --build
 - Interactive API docs: http://localhost:8000/docs
 
 Stop it with `Ctrl+C`. To also wipe saved data: `docker compose down -v`.
+
+## Run the frontend
+
+```bash
+cd frontend
+python3 -m http.server 5500
+```
+
+Open http://localhost:5500. It runs in **demo mode** with fake responses and is not connected to the backend yet. See [frontend/README.md](frontend/README.md#current-status-demo-mode) for what's needed to connect them.
 
 ## Working endpoints
 
