@@ -1,0 +1,8 @@
+{
+  "seed": 1729,
+  "font": "DejaVu Sans (source font file not bundled)",
+  "font_sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280",
+  "opencv": "5.0.0",
+  "numpy": "2.5.1",
+  "cases": 20
+}
