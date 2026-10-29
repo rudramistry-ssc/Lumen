@@ -1,0 +1,5 @@
+# Everything needed to run the whole app locally, in one virtual environment.
+# Install from the repository root:  pip install -r requirements.txt
+-r backend/requirements.txt
+-r ai-service/requirements.txt
+-e ./ocr[preprocess]

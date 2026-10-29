@@ -1,0 +1,5 @@
+# Python virtual environment for the whole app (see README)
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
