@@ -1,7 +1,5 @@
-# Default (`docker compose up --build`) starts the API only, because the AI
-# service folder does not exist yet. Once `../ai-service` is there, run:
-#   docker compose --profile ai up --build
-# Or point AI_BASE_URL at a remote AI service and never enable the profile.
+# `docker compose up --build` starts the API plus the OCR service (../ocr).
+# For now the OCR service only offers /v1/ocr; TTS, STT and chat come later.
 
 services:
   api:
@@ -14,14 +12,15 @@ services:
       AI_BASE_URL: http://ai:8000   # compose service name, NOT localhost
       AI_TIMEOUT_SECONDS: "120"     # OCR + TTS can be slow
       CORS_ORIGINS: "*"
+      TTS_ENABLED: "false"          # flip to "true" once the AI service has /v1/tts
     volumes:
       - appdata:/data               # sqlite + generated mp3s
+    depends_on:
+      - ai
     restart: unless-stopped
 
   ai:
-    profiles: ["ai"]                # opt-in: docker compose --profile ai up
-    # Your teammate's Dockerfile; override AI_BUILD_CONTEXT if it lives elsewhere.
-    build: ${AI_BUILD_CONTEXT:-../ai-service}
+    build: ../ocr                   # Tesseract + the OCR web wrapper
     expose:
       - "8000"                      # internal only, no host port needed
 

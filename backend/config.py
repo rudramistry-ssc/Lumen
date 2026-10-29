@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     max_upload_mb: int = 15
     tts_voice: str = "en-US-AvaNeural"  # passed through to the AI service
+    # Off until the AI service offers /v1/tts; scans then return text only.
+    tts_enabled: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:

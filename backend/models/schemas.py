@@ -14,7 +14,7 @@ class ScanOut(BaseModel):
     session_id: str
     text: str          # what the AI service read from the image
     language: str      # detected language tag (shown in the UI)
-    audio_url: str     # relative, e.g. /v1/media/<id>.mp3
+    audio_url: str     # relative, e.g. /v1/media/<id>.mp3; "" while TTS is off
     ms: int            # total OCR + TTS time, handy during the demo
 
 

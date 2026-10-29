@@ -1,4 +1,4 @@
-"""Scan pipeline: validate upload → OCR → TTS → store the mp3."""
+"""Scan pipeline: validate upload → OCR → (optional) TTS → store the mp3."""
 
 import time
 
@@ -37,16 +37,19 @@ async def upload_image(session_id: str, file: UploadFile):
     if not text:
         raise HTTPException(status_code=422, detail="No readable text found")
 
-    # Speak the text back, then remember it as the session's document.
-    audio = await ai_client.tts(text)
-    name = storage_service.save_audio(audio)
+    # Speak the text back (once TTS is enabled), then remember it as the
+    # session's document. An empty audio_url means "text only".
+    audio_url = ""
+    if get_settings().tts_enabled:
+        audio = await ai_client.tts(text)
+        audio_url = f"/v1/media/{storage_service.save_audio(audio)}"
     session_service.set_session_scan(session_id, text, language)
 
     return {
         "session_id": session_id,
         "text": text,
         "language": language,
-        "audio_url": f"/v1/media/{name}",
+        "audio_url": audio_url,
         "ms": int((time.perf_counter() - started) * 1000),
     }
 
