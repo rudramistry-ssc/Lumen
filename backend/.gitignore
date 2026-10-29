@@ -1,0 +1,7 @@
+# Local runtime data and secrets.
+__pycache__/
+*.pyc
+.venv/
+.env
+data/
+*.db

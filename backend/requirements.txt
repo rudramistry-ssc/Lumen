@@ -1,0 +1,12 @@
+# Web framework + ASGI server
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# HTTP client used by services/ai_client.py
+httpx>=0.27
+
+# Required for multipart form/file uploads
+python-multipart>=0.0.9
+
+# Env-based settings in config.py
+pydantic-settings>=2.4

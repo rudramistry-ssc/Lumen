@@ -1,0 +1,29 @@
+# Default (`docker compose up --build`) starts the API only, because the AI
+# service folder does not exist yet. Once `../ai-service` is there, run:
+#   docker compose --profile ai up --build
+# Or point AI_BASE_URL at a remote AI service and never enable the profile.
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"                 # the only port the browser/laptop needs
+    environment:
+      DB_PATH: /data/app.db         # inside the volume, survives restarts
+      MEDIA_DIR: /data/media
+      AI_BASE_URL: http://ai:8000   # compose service name, NOT localhost
+      AI_TIMEOUT_SECONDS: "120"     # OCR + TTS can be slow
+      CORS_ORIGINS: "*"
+    volumes:
+      - appdata:/data               # sqlite + generated mp3s
+    restart: unless-stopped
+
+  ai:
+    profiles: ["ai"]                # opt-in: docker compose --profile ai up
+    # Your teammate's Dockerfile; override AI_BUILD_CONTEXT if it lives elsewhere.
+    build: ${AI_BUILD_CONTEXT:-../ai-service}
+    expose:
+      - "8000"                      # internal only, no host port needed
+
+volumes:
+  appdata:

@@ -1,0 +1,10 @@
+# Keep secrets and runtime data out of the image.
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+.env
+data
+*.db
+README.md
