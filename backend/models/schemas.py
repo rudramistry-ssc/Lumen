@@ -30,6 +30,7 @@ class ScanOut(BaseModel):
     guardrails: dict[str, JsonValue] | None = None
     cache_hit: bool = False
     execution_this_call: dict[str, int] = Field(default_factory=dict)
+    vision_error: str | None = None
 
 
 class DocumentOut(BaseModel):

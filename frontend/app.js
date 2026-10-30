@@ -20,7 +20,6 @@
     document: null,
     extracting: false,
     busy: false,
-    stopListening: null,
   };
 
   function newId() {
@@ -150,7 +149,9 @@
       console.error(err);
       stopStages(true);
       setExtractState("empty");
-      showExtractError(`${t("errExtract")} ${err.message || ""}`);
+      const errorKey = err.status === 503 && err.retryAfter ? "errAiBusy"
+        : err.status >= 500 ? "errAiService" : "errExtract";
+      showExtractError(`${t(errorKey)} ${errorKey === "errAiBusy" ? "" : err.message || ""}`.trim());
     } finally {
       state.extracting = false;
       $("new-session").disabled = false;
@@ -220,6 +221,7 @@
       sections: doc.sections, text_observations: doc.text_observations,
       ocr_comparison: doc.ocr_comparison, guardrails: doc.guardrails,
       cache_hit: doc.cache_hit, execution_this_call: doc.execution_this_call,
+      vision_error: doc.vision_error,
     }, null, 2);
   }
 
@@ -370,6 +372,11 @@
 
   function speak(text, lang, owner) {
     if (!text.trim()) return;
+    const needed = lang === "mixed" ? ["en", "fr"] : [lang];
+    if (needed.some((code) => !Speech.hasLocalVoice(code))) {
+      showExtractError(t("noVoice", { lang: needed.map(langName).join(" / ") }));
+      return;
+    }
     stopAll();
     if (owner === "source") showReadingView(text); else hideReadingView();
     Speech.speak(text, lang, {
@@ -482,7 +489,12 @@
       console.error(err);
       pending.classList.remove("is-pending");
       pending.classList.add("is-error");
-      pending.querySelector(".msg-body").textContent = `${t("errChat")} ${err.message || ""}`;
+      const networkFailure = !err.status;
+      pending.querySelector(".msg-body").textContent = networkFailure
+        ? t("errChatConnection")
+        : `${t("errChat")} ${err.message || ""}`;
+      if (!input.value.trim()) input.value = message;
+      autoGrow();
     } finally {
       state.busy = false;
       $("new-session").disabled = false;
@@ -615,7 +627,6 @@
 
   function resetSession() {
     stopAll();
-    if (state.stopListening) state.stopListening();
     if (recorder) { const r = recorder; recorder = null; r.stop().catch(() => {}); }
     uploading = false;
     setMicState(false);

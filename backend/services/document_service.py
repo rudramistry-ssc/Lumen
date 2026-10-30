@@ -54,6 +54,7 @@ class ProcessorResult(BaseModel):
     guardrails: dict[str, JsonValue] | None = None
     cache_hit: bool = False
     execution_this_call: dict[str, int] = Field(default_factory=dict)
+    vision_error: str | None = None
 
 
 @lru_cache
@@ -169,6 +170,7 @@ def _process_document(session_id: str, data: bytes) -> ScanOut:
             guardrails=result.guardrails,
             cache_hit=result.cache_hit,
             execution_this_call=result.execution_this_call,
+            vision_error=result.vision_error,
         )
         session_service.set_session_document(session_id, document, response.text, response.language)
         return response

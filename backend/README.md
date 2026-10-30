@@ -7,7 +7,18 @@ and a persistent Qwen server.
 ## Vision-first integration milestone
 
 The AI branch is now combined with the application on `integration/offline-poc`.
-The existing Docker Compose demo remains OCR-only for now.
+The repository-root Compose setup runs the full application:
+
+```bash
+# From the repository root (not backend/):
+docker compose up --build
+```
+
+First setup downloads verified models into `signspeak_models`; subsequent
+offline starts use `docker compose up --pull never --no-build`. SQLite,
+documents and media live in `signspeak_appdata`. See [the root guide](../README.md)
+for ports, RAM/disk recommendations, live checks and troubleshooting commands.
+The original `backend/docker-compose.yml` remains an OCR-only demo.
 
 To try the new upload path locally, first provision Tesseract (English/French),
 the pinned Qwen model/projector and llama.cpp as described in
@@ -29,6 +40,21 @@ uvicorn main:app --reload
 The standard bounded AI worker remains enabled. One expensive upload is allowed
 at a time per backend process; uploads, Q&A and Piper share this slot.
 Another request receives `503` and can be retried.
+An upload rejected as busy has not been analysed: the frontend displays a
+specific wait/retry notice, not an image-quality error. A request in another
+tab can occupy the shared slot for several minutes on CPU. There is no
+automatic upload retry or queue.
+If the browser loses a chat response, it restores the question draft and warns
+that the turn may already be saved. It does not automatically resubmit an
+ambiguous network failure, which could duplicate a successful conversation turn.
+
+Vision observations limit alternatives to four readings to prevent
+unbounded repetitive JSON generation. Incomplete generations remain failures,
+not salvaged partial results. The prompt/schema change gives uploads a new
+configuration cache key; old results/evidence are preserved, not deleted.
+Exact duplicate observation alternatives are deduplicated with an explicit
+normalization warning; literal text is unchanged and raw output is retained.
+The scan metadata includes `vision_error` when a vision attempt falls back.
 
 The existing image endpoint now returns selected vision text, `document_id`,
 ordered sections, visual descriptions, uncertainties, OCR comparison, guardrails
@@ -98,8 +124,7 @@ persisted by transcription; conversion/Whisper temporary files are cleaned by
 the existing modules. The legacy `/audio` route still stores clips for the old
 OCR-only demo. There is no browser cloud-recognition fallback in the UI.
 
-Browser session recovery and full-stack model-volume Docker provisioning remain
-pending. Raw audio submitted directly to document chat is rejected rather than
+Browser session recovery remains pending. Raw audio submitted directly to document chat is rejected rather than
 answered before transcript review.
 
 Quick no-model check: `python -B -m unittest discover -s tests -v` from `backend/`.

@@ -6,11 +6,9 @@ Plain HTML, CSS and JavaScript. No build step, no npm, nothing to install. The p
 
 ## Run the app
 
-The UI is normally served by the backend, together with the API and the OCR
-service:
+The UI is served by the backend. From the repository root, start the full stack:
 
 ```bash
-cd backend
 docker compose up --build
 ```
 
@@ -57,7 +55,9 @@ word highlighting. Microphone input uses local Whisper, puts the transcript in
 the question box for review/correction, and waits for Send before asking Qwen.
 There is no cloud recognition fallback. FFmpeg and Whisper must be provisioned
 on the backend; see the backend setup above. The existing Docker demo
-below is still OCR-only.
+below describes the preserved legacy OCR-only demo (`cd backend` before Compose).
+For the full integrated app, run Compose at the repository root; see
+[the launch guide](../README.md).
 
 The UI is wired to the real backend and uses it by default (`USE_MOCK: false`,
 `API_BASE_URL: ""`). What works today:

@@ -40,6 +40,22 @@ class Fake:
 
 
 class ReconcileTests(unittest.TestCase):
+    def test_observation_alternatives_are_bounded_and_distinct(self):
+        value = {"printed_text_status": "present",
+                 "sections": [{"text": "9:00 AM", "text_state": "uncertain"}],
+                 "visual_descriptions": [], "text_observations": [{
+                     "kind": "replacement_uncertain", "text": "9:00 AM",
+                     "alternatives": ["10:00 AM"], "note": "Uncertain time"}]}
+        self.assertEqual(validate_output(json.dumps(value), require_typed=True)["sections"], value["sections"])
+        value["text_observations"][0]["alternatives"] = ["10:00 AM"] * 2
+        result = validate_output(json.dumps(value), require_typed=True)
+        self.assertEqual(result["text_observations"][0]["alternatives"], ["10:00 AM"])
+        self.assertIn("duplicate_observation_alternatives_removed", result["normalization_warnings"])
+        self.assertEqual(result["sections"], value["sections"])
+        value["text_observations"][0]["alternatives"] = ["a", "b", "c", "d", "e"]
+        with self.assertRaisesRegex(ValueError, "limited to four"):
+            validate_output(json.dumps(value), require_typed=True)
+
     def test_typed_symbol_contract_normalizes_contradictory_status_only(self):
         value = {"printed_text_status": "none", "sections": [], "visual_descriptions": [{"text": "No smoking pictogram", "language": "en", "kind": "symbol"}], "text_observations": []}
         self.assertEqual(validate_output(json.dumps(value), require_typed=True)["sections"], [])

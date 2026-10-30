@@ -1,0 +1,13 @@
+.git
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.env
+**/data
+**/runtime
+**/*.db
+**/*.gguf
+**/*.onnx
+**/*.bin
+**/*.wav
+**/dist

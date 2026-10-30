@@ -1,0 +1,56 @@
+FROM python:3.12-slim-bookworm AS native
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Match the AI teammate's tested revisions; verify source archives before building.
+RUN curl --fail --location --retry 3 \
+    https://codeload.github.com/ggml-org/llama.cpp/tar.gz/5cd62ffee991190be32fb64e2b5357b4fc07eeba \
+    -o /tmp/llama.tar.gz \
+    && echo "112547086139bc0253a2f4455c53cfb8cb6cad76d8753111fb08845e36e7ee94  /tmp/llama.tar.gz" | sha256sum -c - \
+    && mkdir /llama && tar -xzf /tmp/llama.tar.gz -C /llama --strip-components=1 \
+    && cmake -S /llama -B /llama/build -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_CUDA=OFF \
+        -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=ON \
+    && cmake --build /llama/build --target llama-server -j 2
+
+RUN curl --fail --location --retry 3 \
+    https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/d1be6fde11ac6e0407606b4e42fe72d34add8037 \
+    -o /tmp/whisper.tar.gz \
+    && echo "645445da884df6dbd52b30f82d7be7c01d1767c938714e477e786b88d529e9f4  /tmp/whisper.tar.gz" | sha256sum -c - \
+    && mkdir /whisper && tar -xzf /tmp/whisper.tar.gz -C /whisper --strip-components=1 \
+    && cmake -S /whisper -B /whisper/build -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_CUDA=OFF \
+        -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF \
+    && cmake --build /whisper/build --target whisper-cli -j 2
+
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libgomp1 libstdc++6 ffmpeg \
+    tesseract-ocr tesseract-ocr-eng tesseract-ocr-fra \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=native /llama/build/bin/llama-server /usr/local/bin/llama-server
+COPY --from=native /whisper/build/bin/whisper-cli /usr/local/bin/whisper-cli
+
+WORKDIR /app
+COPY ocr /app/ocr
+COPY llm /app/llm
+COPY speech /app/speech
+COPY stt /app/stt
+COPY voice /app/voice
+COPY backend/requirements.txt backend/requirements-ai.txt /app/backend/
+WORKDIR /app/backend
+RUN pip install --no-cache-dir -r requirements-ai.txt
+
+COPY backend /app/backend
+COPY frontend /app/frontend
+COPY handoff /app/handoff
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

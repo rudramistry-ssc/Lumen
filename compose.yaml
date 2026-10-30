@@ -1,0 +1,77 @@
+name: signspeak
+
+x-model-environment: &model-environment
+  SIGNSPEAK_LLM_MODEL: /models/qwen/Qwen3VL-2B-Instruct-Q4_K_M.gguf
+  SIGNSPEAK_LLM_PROJECTOR: /models/qwen/mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf
+  SIGNSPEAK_VOICE_DIR: /models/voices
+  SIGNSPEAK_WHISPER_MODEL: /models/whisper/ggml-base.bin
+  SIGNSPEAK_WHISPER_CLI: /usr/local/bin/whisper-cli
+  SIGNSPEAK_LLAMA_SERVER: /usr/local/bin/llama-server
+  SIGNSPEAK_FFMPEG: /usr/bin/ffmpeg
+
+services:
+  models:
+    image: signspeak-app:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.offline
+    command: ["python", "/app/backend/docker_runtime.py", "provision"]
+    environment: *model-environment
+    volumes:
+      - models:/models
+    restart: "no"
+
+  qwen:
+    image: signspeak-app:local
+    command: ["python", "/app/backend/docker_runtime.py", "serve"]
+    environment:
+      <<: *model-environment
+      SIGNSPEAK_THREADS: ${AI_THREADS:-4}
+    volumes:
+      - models:/models:ro
+    depends_on:
+      models:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "/app/backend/docker_runtime.py", "health", "http://127.0.0.1:8091/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    init: true
+    restart: unless-stopped
+
+  api:
+    image: signspeak-app:local
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    working_dir: /app/backend
+    environment:
+      <<: *model-environment
+      IMAGE_PROCESSING_MODE: document
+      SIGNSPEAK_LLM_URL: http://qwen:8091
+      DOCUMENT_CACHE_DIR: /data/documents
+      DOCUMENT_TIMEOUT_SECONDS: "600"
+      DB_PATH: /data/app.db
+      MEDIA_DIR: /data/media
+      FRONTEND_DIR: /app/frontend
+      CORS_ORIGINS: http://localhost:${APP_PORT:-8000},http://127.0.0.1:${APP_PORT:-8000}
+      OMP_NUM_THREADS: ${AI_THREADS:-4}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    volumes:
+      - models:/models:ro
+      - appdata:/data
+    depends_on:
+      qwen:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/backend/docker_runtime.py", "health", "http://127.0.0.1:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    init: true
+    restart: unless-stopped
+
+volumes:
+  models:
+  appdata:

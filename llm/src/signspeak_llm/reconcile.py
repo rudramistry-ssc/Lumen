@@ -28,6 +28,11 @@ text, language (en/fr/unknown), and kind (symbol/pictogram/layout). These descri
 are interpretations, not printed transcription. Use text_observations for crossed_out,
 replacement_uncertain, redacted, illegible or critical_value observations, each with
 text, alternatives (visible readings only), and note. Do not guess hidden values.
+Use empty text_observations when there is no visible ambiguity or marking.
+Each observation has at most four distinct alternatives; never repeat an
+alternative or include the observation's own text as an alternative.
+Keep notes and visual descriptions concise. Do not invent cross-outs.
+If an alternative is identical to the observed text, omit it.
 Preserve readable crossed-out words but do not assert which time/value is current.
 Record a possible replacement as uncertain; do not silently replace the original.
 Sections contain actual visible text,
@@ -53,7 +58,7 @@ SCHEMA = {"type": "object", "properties": {
         "required": ["text", "language", "kind"], "additionalProperties": False}},
     "text_observations": {"type": "array", "maxItems": 64, "items": {"type": "object", "properties": {
         "kind": {"type": "string", "enum": ["crossed_out", "replacement_uncertain", "redacted", "illegible", "critical_value"]},
-        "text": {"type": "string"}, "alternatives": {"type": "array", "items": {"type": "string"}}, "note": {"type": "string"}},
+        "text": {"type": "string"}, "alternatives": {"type": "array", "maxItems": 4, "items": {"type": "string"}}, "note": {"type": "string"}},
         "required": ["kind", "text", "alternatives", "note"], "additionalProperties": False}}},
     "required": ["printed_text_status", "sections", "visual_descriptions", "text_observations"], "additionalProperties": False}
 
@@ -142,6 +147,8 @@ def validate_output(raw, *, require_typed=False):
             if not isinstance(item, dict) or set(item) != {"kind", "text", "alternatives", "note"}: raise ValueError("Invalid text observation")
             if item["kind"] not in {"crossed_out", "replacement_uncertain", "redacted", "illegible", "critical_value"}: raise ValueError("Invalid observation type")
             if not all(isinstance(item[k], str) and "\0" not in item[k] for k in ("text", "note")) or not isinstance(item["alternatives"], list) or any(not isinstance(v, str) or "\0" in v for v in item["alternatives"]): raise ValueError("Invalid observation reading")
+            if len(item["alternatives"]) > 4:
+                raise ValueError("Observation alternatives are limited to four")
     # Normalize metadata only AFTER validating all fields. Never rewrite literal
     # sections or rescue malformed/truncated model output. Raw JSON remains in
     # result['inference']['answer'] for review.
@@ -153,6 +160,10 @@ def validate_output(raw, *, require_typed=False):
             value["normalization_warnings"].append("printed_text_status_none_normalized_to_present_from_literal_sections")
         confirmed = []
         for item in value["text_observations"]:
+            alternatives = list(dict.fromkeys(item["alternatives"]))
+            if alternatives != item["alternatives"]:
+                item["alternatives"] = alternatives
+                value["normalization_warnings"].append("duplicate_observation_alternatives_removed")
             supported = any(s["text_state"] == "crossed_out" and item["text"].strip()
                             and item["text"] in s["text"] for s in value["sections"])
             if item["kind"] == "crossed_out" and not supported:

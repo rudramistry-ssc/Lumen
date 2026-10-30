@@ -13,6 +13,7 @@
       const error = new Error(`${res.status}: ${message}`);
       error.status = res.status;
       error.detail = detail;
+      error.retryAfter = res.headers.get("Retry-After");
       throw error;
     }
     return res.json();

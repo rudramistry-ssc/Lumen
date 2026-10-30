@@ -1,7 +1,5 @@
-// Text-to-speech and speech-to-text using the browser's built-in APIs.
-// TTS works offline with the voices installed on the computer.
-// Browser speech recognition (Chrome/Edge) sends audio online; for a fully
-// offline app, replace listen() with a call to a backend Whisper endpoint.
+// Local browser voices for UI/demo text; document audio comes from Piper.
+// Microphone recording stays local and is sent only to our backend Whisper.
 (function () {
   const synth = window.speechSynthesis;
   const LOCALES = { en: ["en-CA", "en-US", "en-GB", "en"], fr: ["fr-CA", "fr-FR", "fr"] };
@@ -16,12 +14,9 @@
     return [];
   }
 
-  // Chrome and Edge list cloud voices next to local ones. Cloud voices are
-  // silent without internet, so always prefer a voice installed on the
-  // computer; fall back to a cloud voice only when we are online.
   function pickVoice(lang) {
     const match = voicesFor(lang);
-    return match.find((v) => v.localService) || (navigator.onLine ? match[0] : null) || null;
+    return match.find((v) => v.localService) || null;
   }
 
   // Split mixed text into chunks by guessed language, so each part is read
@@ -52,7 +47,6 @@
 
   window.Speech = {
     supported: !!synth,
-    canListen: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
     // MediaRecorder keeps the audio local; unlike SpeechRecognition this works
     // offline. getUserMedia needs a secure context (localhost or HTTPS).
     canRecord: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder),
@@ -70,7 +64,11 @@
       parts.forEach((p, i) => {
         const u = new SpeechSynthesisUtterance(p.text);
         const v = pickVoice(p.lang);
-        if (v) u.voice = v;
+        if (!v) {
+          if (i === parts.length - 1 && onEnd) onEnd();
+          return;
+        }
+        u.voice = v;
         u.lang = v ? v.lang : (p.lang === "fr" ? "fr-CA" : "en-CA");
         u.rate = rate;
         // charIndex is relative to this chunk; report it relative to the full text
@@ -85,21 +83,6 @@
     stop() { if (synth) { current = null; synth.cancel(); } },
     get speaking() { return !!synth && synth.speaking; },
     get paused() { return !!synth && synth.paused; },
-
-    // Returns a stop() function. Calls onResult(finalText) once.
-    listen(lang, { onResult, onError, onEnd }) {
-      const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!Rec) { onError && onError("unsupported"); return () => {}; }
-      const rec = new Rec();
-      rec.lang = lang === "fr" ? "fr-CA" : "en-CA";
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      rec.onresult = (e) => onResult && onResult(e.results[0][0].transcript);
-      rec.onerror = (e) => onError && onError(e.error);
-      rec.onend = () => onEnd && onEnd();
-      rec.start();
-      return () => rec.stop();
-    },
 
     // Records a clip with the microphone and keeps it in memory. Resolves to
     // { mimeType, stop() }, where stop() returns a Promise<Blob>. Safe to call
