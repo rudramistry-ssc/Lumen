@@ -62,3 +62,13 @@ class ChatOut(BaseModel):
 class ReadOut(BaseModel):
     audio_url: str
     metadata: dict[str, JsonValue]
+
+
+class TranscriptionOut(BaseModel):
+    status: str
+    review_text: str
+    confirmation_required: bool
+    requested_language: str
+    suggested_language: str | None = None
+    transcription: dict[str, JsonValue]
+    processing_seconds: float

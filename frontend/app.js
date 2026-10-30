@@ -106,7 +106,7 @@
   });
 
   async function handleFile(file) {
-    if (state.extracting || state.busy) return;
+    if (state.extracting || state.busy || uploading || starting || recorder) return;
     showExtractError("");
     if (!file.type.startsWith("image/")) return showExtractError(t("errNotImage"));
     if (file.size > cfg.MAX_IMAGE_MB * 1024 * 1024) return showExtractError(t("errTooBig", { mb: cfg.MAX_IMAGE_MB }));
@@ -155,7 +155,7 @@
       state.extracting = false;
       $("new-session").disabled = false;
       $("send-btn").disabled = state.document?.status === "ocr_unreviewed_fallback";
-      $("mic-btn").disabled = !!state.document;
+      $("mic-btn").disabled = state.document?.status === "ocr_unreviewed_fallback";
     }
     applyI18n();
   }
@@ -438,7 +438,7 @@
   async function send() {
     const input = $("chat-input");
     const message = input.value.trim();
-    if (!message || state.busy || state.extracting) return;
+    if (!message || state.busy || state.extracting || uploading || starting || recorder) return;
     if (state.document?.status === "ocr_unreviewed_fallback") {
       showNote("documentFallback");
       return;
@@ -492,9 +492,7 @@
   }
 
   // ---------- voice input ----------
-  // Preferred path: record with MediaRecorder and upload the clip. It works
-  // offline and needs no cloud speech service. If the browser cannot record,
-  // fall back to SpeechRecognition (Chrome/Edge, online only).
+  // Document audio is transcribed locally; the user must press Send after review.
   let recorder = null;
   let uploading = false;
   let starting = false; // true while the browser is asking for the mic
@@ -529,26 +527,53 @@
     recorder = null;
     setMicState(false);
     uploading = true;
+    $("new-session").disabled = true;
+    $("send-btn").disabled = true;
+    $("mic-btn").disabled = true;
+    $("chat-input").disabled = true;
     try {
       const blob = await current.stop();
       if (!blob || !blob.size) { showNote("micEmpty"); return; }
-      showNote("micUploading");
-      const res = await API.uploadAudio(state.sessionId, blob);
-      const audio = $("mic-preview");
-      audio.src = apiUrl(res.audio_url);
-      audio.hidden = false;
-      showNote("micRecorded");
+      if (state.document) {
+        showNote("micTranscribing");
+        const res = await API.transcribe(state.sessionId, blob);
+        if (res.status === "ready_for_review") {
+          $("chat-input").value = res.review_text;
+          autoGrow();
+          showNote("micReview");
+          const warnings = res.transcription?.warnings || [];
+          if (warnings.length) $("mic-note").textContent += " " + warnings.join(" ");
+          $("chat-input").focus();
+        } else {
+          showNote("micNoTranscript");
+          $("mic-note").textContent += ` (${res.status})`;
+        }
+      } else {
+        showNote("micUploading");
+        const res = await API.uploadAudio(state.sessionId, blob);
+        const audio = $("mic-preview");
+        audio.src = apiUrl(res.audio_url);
+        audio.hidden = false;
+        showNote("micRecorded");
+      }
     } catch (err) {
       console.error(err);
       showNote("micUploadFailed");
+      $("mic-note").textContent += " " + (err.message || "");
     } finally {
       uploading = false;
+      $("new-session").disabled = false;
+      $("send-btn").disabled = false;
+      $("mic-btn").disabled = false;
+      $("chat-input").disabled = false;
+      $("chat-input").focus();
     }
   }
 
   async function startRecording() {
     if (starting) return; // ignore double-clicks while the mic prompt is open
     starting = true;
+    $("new-session").disabled = true;
     hideNote();
     stopAll();
     try {
@@ -564,36 +589,19 @@
       return;
     } finally {
       starting = false;
+      $("new-session").disabled = !!recorder;
     }
     setMicState(true);
     showNote("micRecording");
   }
 
   $("mic-btn").addEventListener("click", () => {
-    if (uploading || starting) return;
+    if (uploading || starting || state.busy || state.extracting) return;
     if (recorder) { stopRecordingAndUpload(); return; }
-    if (state.stopListening) { state.stopListening(); return; }
+    if (state.document?.status === "ocr_unreviewed_fallback") { showNote("documentFallback"); return; }
+    if ($("chat-input").value.trim()) { showNote("micDraft"); return; }
     if (Speech.canRecord) { startRecording(); return; }
-    if (!Speech.canListen) { showNote("micUnsupported"); return; }
-
-    // Fallback: the browser's cloud recognition, used only when recording is
-    // unavailable. It needs an internet connection.
-    stopAll();
-    showNote("listening");
-    setMicState(true);
-    state.stopListening = Speech.listen(replyLang(), {
-      onResult: (text) => { $("chat-input").value = text; autoGrow(); send(); },
-      onError: (err) => {
-        if (err === "not-allowed") showNote("micDenied");
-        else if (err === "network") showNote("micNetwork");
-        else showNote("micUnsupported");
-      },
-      onEnd: () => {
-        state.stopListening = null;
-        setMicState(false);
-        if ($("mic-note").textContent === t("listening")) hideNote();
-      },
-    });
+    showNote("micUnsupported");
   });
 
   // ---------- top bar ----------
@@ -619,6 +627,7 @@
     Object.assign(state, { sessionId: newId(), file: null, text: "", language: "en", history: [], document: null });
     $("send-btn").disabled = false;
     $("mic-btn").disabled = false;
+    $("chat-input").value = "";
     renderDocumentReview();
     playing = null;
     $("preview").hidden = true;

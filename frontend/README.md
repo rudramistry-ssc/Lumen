@@ -53,7 +53,10 @@ interpretations, and expandable processing metadata. Document read-aloud uses
 Piper WAV, and typed chat uses saved document context/history with guardrails.
 Blocked answers are not spoken; a speech failure leaves the text answer visible.
 Selected text is read-only; WAV playback supports pause, stop and speed but no
-word highlighting. Microphone transcription is next. The existing Docker demo
+word highlighting. Microphone input uses local Whisper, puts the transcript in
+the question box for review/correction, and waits for Send before asking Qwen.
+There is no cloud recognition fallback. FFmpeg and Whisper must be provisioned
+on the backend; see the backend setup above. The existing Docker demo
 below is still OCR-only.
 
 The UI is wired to the real backend and uses it by default (`USE_MOCK: false`,

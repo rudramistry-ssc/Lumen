@@ -64,6 +64,9 @@ class ConversationSmoke(unittest.TestCase):
         llm = Mock()
         llm.answer.return_value = {"answer": "Monday.", "warnings": []}
         voice = VoiceConversation(stt=Mock(), llm=llm, speech=speech)
+        voice.stt.transcribe.return_value = {
+            "status": "ok", "text": "Which date?", "language": "en", "warnings": []
+        }
 
         with patch.object(conversation_service, "get_conversation", return_value=voice):
             with TestClient(app) as client:
@@ -79,6 +82,23 @@ class ConversationSmoke(unittest.TestCase):
                 answer = client.post(base + "/chat", data={"message": "When?", "language": "en"})
                 self.assertEqual(answer.status_code, 200, answer.text)
                 self.assertEqual(answer.json()["status"], "ok")
+                self.assertEqual(len(session_service.conversation_history(identifier)), 2)
+
+                llm.reset_mock()
+                speech.reset_mock()
+                with patch("signspeak_stt.convert_audio", return_value=b"converted-wav") as convert:
+                    with patch("services.conversation_service.shutil.which", return_value="ffmpeg"):
+                        prepared = client.post(base + "/transcribe", files={
+                            "file": ("question.webm", b"browser-recording", "audio/webm"),
+                        })
+                self.assertEqual(prepared.status_code, 200, prepared.text)
+                self.assertEqual(prepared.json()["status"], "ready_for_review")
+                self.assertEqual(prepared.json()["review_text"], "Which date?")
+                self.assertTrue(prepared.json()["confirmation_required"])
+                convert.assert_called_once_with(b"browser-recording", ffmpeg="ffmpeg")
+                voice.stt.transcribe.assert_called_once_with(b"converted-wav", "auto")
+                llm.answer.assert_not_called()
+                speech.synthesize_segments.assert_not_called()
                 self.assertEqual(len(session_service.conversation_history(identifier)), 2)
 
                 speech.synthesize_segments.side_effect = RuntimeError("voice unavailable")

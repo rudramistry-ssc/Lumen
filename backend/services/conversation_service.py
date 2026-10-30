@@ -1,13 +1,16 @@
 """Use the AI team's selected document and guarded Q&A without reprocessing."""
 
 import logging
+import os
+import shutil
+import subprocess
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 
 from config import get_settings
-from models.schemas import ChatOut, ReadOut
+from models.schemas import ChatOut, ReadOut, TranscriptionOut
 from services import document_service, session_service, storage_service
 
 if TYPE_CHECKING:
@@ -60,6 +63,42 @@ def _acquire() -> None:
             detail="AI processing is busy. Please retry when it finishes.",
             headers={"Retry-After": "5"},
         )
+
+
+def prepare_question(session_id: str, data: bytes, language: str) -> TranscriptionOut:
+    _acquire()
+    try:
+        try:
+            from signspeak_stt import convert_audio
+            _session(session_id)
+            voice = get_conversation()
+        except ImportError as exc:
+            logger.exception("Transcription dependencies are missing")
+            raise HTTPException(status_code=503, detail="Install backend/requirements-ai.txt first.") from exc
+        ffmpeg = os.getenv("SIGNSPEAK_FFMPEG", "ffmpeg")
+        if shutil.which(ffmpeg) is None:
+            raise HTTPException(status_code=503, detail="FFmpeg is missing. Install it or set SIGNSPEAK_FFMPEG.")
+        try:
+            wav_bytes = convert_audio(data, ffmpeg=ffmpeg)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Microphone audio conversion timed out")
+            raise HTTPException(status_code=504, detail="Audio conversion timed out.") from exc
+        except OSError as exc:
+            logger.exception("FFmpeg could not run")
+            raise HTTPException(status_code=503, detail="FFmpeg could not run. Check its installation.") from exc
+        result = TranscriptionOut.model_validate(voice.prepare_question(wav_bytes, language=language))
+        if result.status == "error":
+            logger.error("Whisper transcription failed: %s", result.transcription.get("error"))
+            raise HTTPException(
+                status_code=503,
+                detail={"message": "Transcription failed. Check the local Whisper runtime and model.",
+                        "error": result.transcription.get("error")},
+            )
+        return result
+    finally:
+        document_service.inference_slot.release()
 
 
 def read_document(session_id: str, language: str, include_visual_descriptions: bool) -> ReadOut:

@@ -99,8 +99,27 @@ share a single inference slot, returning `503` if busy.
 
 The UI uses server WAV playback for documents and answers, with pause/stop/rate.
 There is no word highlighting for WAV. Selected text is read-only to keep Q&A
-context consistent. The microphone stays disabled in document mode until the
-transcript-review flow is integrated; raw chat audio currently returns `422`.
+context consistent. Raw chat audio returns `422`: microphone questions use the review flow below.
+
+### `POST /v1/sessions/{session_id}/transcribe`
+
+In document mode, recording uses this route instead of storing a clip.
+Multipart fields: `file` (browser audio) and `language=auto|en|fr` (default auto).
+Requires a selected vision document. Input is limited to 60 seconds and at most
+8,000,000 bytes (or the configured smaller `MAX_AUDIO_MB` limit).
+
+Response: `status`, `review_text`, `confirmation_required=true`,
+`requested_language`, `suggested_language`, `transcription` and
+`processing_seconds`. Only `ready_for_review` is suitable for submission.
+No-speech and unsupported-language results show a retry/type notice. Missing
+models/runtime return `503`; bad audio `422`; unsupported MIME `415`;
+oversized audio `413`; conversion timeout `504`.
+
+The UI inserts `review_text` into the editable question box and does not
+automatically send it. The user corrects it, then presses Send/Enter, submitting
+the normal `message` and response `language` to `/chat`. Transcription does not
+call Qwen/Piper or append history. It does not retain uploaded microphone audio.
+The recorder has no online speech-recognition fallback.
 
 ## `POST /v1/sessions/{session_id}/audio`
 

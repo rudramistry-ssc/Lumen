@@ -71,6 +71,14 @@
       form.append("language", language);
       return request(`/v1/sessions/${id}/read`, { method: "POST", body: form });
     },
+
+    async transcribe(sessionId, blob) {
+      const id = await backendSessionId(sessionId);
+      const form = new FormData();
+      form.append("file", blob, "question");
+      form.append("language", "auto");
+      return request(`/v1/sessions/${id}/transcribe`, { method: "POST", body: form });
+    },
   };
 
   // ---------- fake backend for UI work ----------

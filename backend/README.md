@@ -73,9 +73,34 @@ context agree. OCR fallback cannot be read or used for chat without explicit
 review. Piper is reused across requests; no model downloads happen in handlers.
 This path is independent of the legacy `TTS_ENABLED` setting.
 
-Reviewed microphone transcription, browser session recovery and full-stack
-model-volume Docker provisioning are still pending. Raw audio submitted to
-document chat is rejected rather than answered before transcript review.
+### Microphone questions
+
+Install native FFmpeg and the pinned Whisper runtime/model following
+[the STT setup](../stt/README.md). Configure `SIGNSPEAK_FFMPEG`,
+`SIGNSPEAK_WHISPER_CLI` and `SIGNSPEAK_WHISPER_MODEL` in the process environment
+(these AI package variables are not read from the backend `.env` file).
+
+`POST /v1/sessions/{id}/transcribe` accepts multipart `file` and optional
+`language=auto|en|fr`. It converts browser audio to 16 kHz mono PCM16 WAV via
+`convert_audio`, then calls `VoiceConversation.prepare_question`. The response
+includes `status`, `review_text`, `confirmation_required`, detected language,
+transcription warnings and timing. It never calls Qwen/Piper or changes history.
+The maximum is 60 seconds and the smaller of `MAX_AUDIO_MB` and 8,000,000 bytes.
+Invalid audio is `422`, unsupported MIME is `415`, oversized audio is `413`,
+missing runtime/model is `503`, and conversion timeout is `504`.
+
+The UI puts the transcript in the existing question box for correction.
+Only pressing Send (or Enter) submits the confirmed text to the normal guarded
+chat endpoint and shared document history. This explicit submission is the
+confirmation boundary; there is no separate voice-answer endpoint. Transcript
+preparation status is not trusted from the browser. No microphone audio is
+persisted by transcription; conversion/Whisper temporary files are cleaned by
+the existing modules. The legacy `/audio` route still stores clips for the old
+OCR-only demo. There is no browser cloud-recognition fallback in the UI.
+
+Browser session recovery and full-stack model-volume Docker provisioning remain
+pending. Raw audio submitted directly to document chat is rejected rather than
+answered before transcript review.
 
 Quick no-model check: `python -B -m unittest discover -s tests -v` from `backend/`.
 
