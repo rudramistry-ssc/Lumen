@@ -9,7 +9,11 @@
     if (!res.ok) {
       let detail = res.statusText;
       try { detail = (await res.json()).detail || detail; } catch (_) {}
-      throw new Error(`${res.status}: ${detail}`);
+      const message = typeof detail === "string" ? detail : detail.message || JSON.stringify(detail);
+      const error = new Error(`${res.status}: ${message}`);
+      error.status = res.status;
+      error.detail = detail;
+      throw error;
     }
     return res.json();
   }
@@ -30,7 +34,7 @@
   const real = {
     health: () => request("/healthz"),
 
-    // -> { session_id, text, language: "en"|"fr"|"mixed", audio_url, ms }
+    // Document mode also returns document_id, status, sections and review metadata.
     async extract(file, sessionId) {
       const id = await backendSessionId(sessionId);
       const form = new FormData();
@@ -52,12 +56,20 @@
 
     // -> { transcript, reply, audio_url }
     // The backend stores the scan text and the chat history itself, so
-    // contextText / language / history from app.js are not sent.
-    async chat({ sessionId, message }) {
+    // contextText/history are restored by the backend, not supplied by the UI.
+    async chat({ sessionId, message, language = "en" }) {
       const id = await backendSessionId(sessionId);
       const form = new FormData();
       form.append("message", message); // backend chat takes a form field, not JSON
+      form.append("language", language);
       return request(`/v1/sessions/${id}/chat`, { method: "POST", body: form });
+    },
+
+    async readDocument(sessionId, language) {
+      const id = await backendSessionId(sessionId);
+      const form = new FormData();
+      form.append("language", language);
+      return request(`/v1/sessions/${id}/read`, { method: "POST", body: form });
     },
   };
 

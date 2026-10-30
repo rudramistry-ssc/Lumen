@@ -1,0 +1,21 @@
+{
+  "vl": {
+    "repository": "Qwen/Qwen3-VL-2B-Instruct-GGUF",
+    "revision": "52d6c8ffea26cc873ac5ad116f8631268d7eb503",
+    "base_model": "Qwen/Qwen3-VL-2B-Instruct",
+    "license": "Apache-2.0",
+    "filename": "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
+    "bytes": 1107409952,
+    "sha256": "089d75c52f4b7ffc56ba998ffc50aae89fcafc755f9e7208aacca281dca6c2ae"
+  },
+  "text": {
+    "repository": "unsloth/Qwen3-1.7B-GGUF",
+    "revision": "d7f544eead698dbd1f15126ef60b45a1e1933222",
+    "base_model": "Qwen/Qwen3-1.7B",
+    "license": "Apache-2.0",
+    "license_url": "https://huggingface.co/Qwen/Qwen3-1.7B/blob/main/LICENSE",
+    "filename": "Qwen3-1.7B-Q4_K_M.gguf",
+    "bytes": 1107409472,
+    "sha256": "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897"
+  }
+}

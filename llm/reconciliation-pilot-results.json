@@ -1,0 +1,2573 @@
+{
+  "started_utc": "2026-10-29T15:51:56.608532+00:00",
+  "completed_utc": "2026-10-29T15:55:56.609934+00:00",
+  "real_photo_validation": "pending",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.1",
+  "logical_processors": 12,
+  "memory_before": {
+    "total_ram_bytes": 16601190400,
+    "available_ram_bytes": 5701324800
+  },
+  "method": "Same original bytes, preparation and server for both VLM modes. No application cache for measured requests. First request of each mode/image disables prompt reuse; immediate repeat enables it. OS file cache uncontrolled. Fallback text never substituted into model accuracy metrics.",
+  "source_hashes": {
+    "src\\signspeak_llm\\__init__.py": "3596cf0f1b647c652741e37090560d22ac53b598325d82f9c76578730b0d5d0d",
+    "src\\signspeak_llm\\__main__.py": "02e1773276d34998761652206c04b2b2e1fec3c380f1bdac8ceae765ee882ab2",
+    "src\\signspeak_llm\\client.py": "e31d2bb6fb14b92d6b2f51eaf0b93a370a71f20bb8eff60359f81e02d0e9d43b",
+    "src\\signspeak_llm\\context.py": "e4821836c19b9e38b3c6c309487aef8d238fca4960dae76de9621409b7e10bc4",
+    "src\\signspeak_llm\\grounding.py": "1a17461f9a4e025007b7db98c91b29b43e107a21a59320abe02b14ee0fdcf14d",
+    "src\\signspeak_llm\\models.py": "eb562872636d38c842075265ea0ec1f877300ffc4773429cf1c835f0f186c9ee",
+    "src\\signspeak_llm\\reconcile.py": "778979195a6375ad3be53211fee9202b7357380ca48d061aa9a00788f43501d7",
+    "src\\signspeak_llm\\reconciliation_checks.py": "6036cc5dad9931d8981e73faea75756dbc060b91f218ca22dd30f8e845cf0a15",
+    "src\\signspeak_llm\\server.py": "f9dfae16ed6fefae56d7cd31d00787e4e6e0d57e78729b2598c6a1a4abc5efae"
+  },
+  "memory_final": {
+    "working_set_bytes": 3534540800,
+    "peak_working_set_bytes": 3563110400
+  },
+  "cache_reuse_after_server_shutdown": {
+    "cache_hit": true,
+    "status": "needs_review",
+    "cache_lookup_ms": 0.91
+  },
+  "server": {
+    "version": "version: 0.7.0-dev (build 11904, commit 5cd62ffee)\nbuilt with Clang 20.1.8 for Windows x86_64",
+    "artifacts": [
+      {
+        "repository": "Qwen/Qwen3-VL-2B-Instruct-GGUF",
+        "revision": "52d6c8ffea26cc873ac5ad116f8631268d7eb503",
+        "filename": "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
+        "bytes": 1107409952,
+        "sha256": "089d75c52f4b7ffc56ba998ffc50aae89fcafc755f9e7208aacca281dca6c2ae",
+        "license": "Apache-2.0",
+        "verified_sha256": "089d75c52f4b7ffc56ba998ffc50aae89fcafc755f9e7208aacca281dca6c2ae"
+      },
+      {
+        "name": "mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf",
+        "bytes": 445053216,
+        "sha256": "f9a68fabba69c3b81e153367b2c7521030b0fa8bb0de400c9599c8e6725f9c82",
+        "repository": "Qwen/Qwen3-VL-2B-Instruct-GGUF",
+        "revision": "52d6c8ffea26cc873ac5ad116f8631268d7eb503"
+      }
+    ],
+    "command": [
+      "<local llama-server>",
+      "-m",
+      "<verified local Qwen3-VL Q4_K_M>",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8091",
+      "-c",
+      "4096",
+      "-t",
+      "4",
+      "-tb",
+      "4",
+      "-ngl",
+      "0",
+      "--device",
+      "none",
+      "--parallel",
+      "1",
+      "--jinja",
+      "--offline",
+      "--no-context-shift",
+      "--batch-size",
+      "256",
+      "--ubatch-size",
+      "128",
+      "--alias",
+      "signspeak",
+      "--reasoning",
+      "off",
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}",
+      "--mmproj",
+      "<verified local Q8 projector>",
+      "--no-mmproj-offload"
+    ],
+    "startup_ms": 2813.7,
+    "memory_before": {
+      "total_ram_bytes": 16601190400,
+      "available_ram_bytes": 5670682624
+    },
+    "memory_at_ready": {
+      "working_set_bytes": 2772402176,
+      "peak_working_set_bytes": 2822750208
+    }
+  },
+  "manifest": [
+    {
+      "id": "bilingual_shadow",
+      "sha256": "a02c34f2ea223015efb3929f2b8848e213813ab69767c046f32044152baf6c16",
+      "origin": "synthetic",
+      "expected_text": "The library reopens Tuesday at 9:00 AM.\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "expected_reading_order": [
+        "The library reopens Tuesday at 9:00 AM.",
+        "La bibliothèque rouvre mardi à 9 h 00."
+      ],
+      "reference_review": "Existing synthetic ground truth visually inspected against these three images; not independent human photo annotation."
+    },
+    {
+      "id": "columns_photo",
+      "sha256": "343a0844fbdc9082d8c66b0fd4c078cb9a98b7d2745f12a7692d797a6a53a04c",
+      "origin": "synthetic",
+      "expected_text": "ENGLISH NOTICE\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\nChildren under 5 enter free.\n\nAVIS EN FRANÇAIS\nOuvert mardi à 9 h 00.\nEntrée 12,50 $.\nGratuit pour les moins de 5 ans.",
+      "expected_reading_order": [
+        "ENGLISH NOTICE",
+        "Open Tuesday at 9:00 AM.",
+        "Admission $12.50.",
+        "Children under 5 enter free.",
+        "AVIS EN FRANÇAIS",
+        "Ouvert mardi à 9 h 00.",
+        "Entrée 12,50 $.",
+        "Gratuit pour les moins de 5 ans."
+      ],
+      "reference_review": "Existing synthetic ground truth visually inspected against these three images; not independent human photo annotation."
+    },
+    {
+      "id": "nutrition_photo",
+      "sha256": "8cb034814a87e9bd9b985d9ff449ee25fd732c3bae9039b7caf7b0f0b6da1211",
+      "origin": "synthetic",
+      "expected_text": "Nutrition Facts / Valeur nutritive\nPer 125 g / pour 125 g\nCalories 120\nFat 1.5 g 2%\nSodium 230 mg 10%",
+      "expected_reading_order": [
+        "Nutrition Facts / Valeur nutritive",
+        "Per 125 g / pour 125 g",
+        "Calories 120",
+        "Fat 1.5 g 2%",
+        "Sodium 230 mg 10%"
+      ],
+      "reference_review": "Existing synthetic ground truth visually inspected against these three images; not independent human photo annotation."
+    }
+  ],
+  "rows": [
+    {
+      "id": "bilingual_shadow",
+      "mode": "ocr_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "processing_ms": 1381.0,
+      "memory": {
+        "process_peak_rss_mb": null,
+        "children_peak_rss_mb": null
+      }
+    },
+    {
+      "id": "columns_photo",
+      "mode": "ocr_only",
+      "accuracy": {
+        "cer": 0.005714285714285714,
+        "wer": 0.030303030303030304,
+        "critical_reference": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANCAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "processing_ms": 1714.3,
+      "memory": {
+        "process_peak_rss_mb": null,
+        "children_peak_rss_mb": null
+      }
+    },
+    {
+      "id": "nutrition_photo",
+      "mode": "ocr_only",
+      "accuracy": {
+        "cer": 0.009900990099009901,
+        "wer": 0.09090909090909091,
+        "critical_reference": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_output": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "text": "Nutrition Facts / Valeur nutritive\nPer 125 g/ pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "processing_ms": 1258.3,
+      "memory": {
+        "process_peak_rss_mb": null,
+        "children_peak_rss_mb": null
+      }
+    },
+    {
+      "id": "bilingual_shadow",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 31245.74,
+      "memory": {
+        "working_set_bytes": 2943762432,
+        "peak_working_set_bytes": 2975051776
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          260
+        ],
+        "oriented_size": [
+          1000,
+          260
+        ],
+        "prepared_size": [
+          1000,
+          260
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "cb35080e83adb68577a5b1d98518408a304d349238a150f080529397344f3288",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "original",
+            "index": 0,
+            "text": ":00",
+            "alternatives": [
+              "9:00"
+            ],
+            "bbox": [
+              502,
+              46,
+              543,
+              66
+            ],
+            "confidence": 91.109039
+          },
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [
+              ":00"
+            ],
+            "bbox": [
+              483,
+              46,
+              543,
+              66
+            ],
+            "confidence": 94.882263
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "9",
+            "alternatives": [],
+            "bbox": [
+              483,
+              96,
+              497,
+              116
+            ],
+            "confidence": 92.712509
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              ":00",
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "9"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"The library reopens Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"La bibliothèque rouvre mardi à 9 h 00.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 58,
+        "prompt_tokens": 465,
+        "total_tokens": 523,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 20541.71,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 465,
+        "prompt_ms": 20465.836,
+        "prompt_per_token_ms": 44.012550537634404,
+        "prompt_per_second": 22.72079186015172,
+        "predicted_n": 58,
+        "predicted_ms": 10582.507,
+        "predicted_per_token_ms": 185.65801754385964,
+        "predicted_per_second": 5.386247323058704
+      }
+    },
+    {
+      "id": "bilingual_shadow",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 3872.1,
+      "memory": {
+        "working_set_bytes": 2944012288,
+        "peak_working_set_bytes": 2975051776
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          260
+        ],
+        "oriented_size": [
+          1000,
+          260
+        ],
+        "prepared_size": [
+          1000,
+          260
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "cb35080e83adb68577a5b1d98518408a304d349238a150f080529397344f3288",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "original",
+            "index": 0,
+            "text": ":00",
+            "alternatives": [
+              "9:00"
+            ],
+            "bbox": [
+              502,
+              46,
+              543,
+              66
+            ],
+            "confidence": 91.109039
+          },
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [
+              ":00"
+            ],
+            "bbox": [
+              483,
+              46,
+              543,
+              66
+            ],
+            "confidence": 94.882263
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "9",
+            "alternatives": [],
+            "bbox": [
+              483,
+              96,
+              497,
+              116
+            ],
+            "confidence": 92.712509
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              ":00",
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "9"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"The library reopens Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"La bibliothèque rouvre mardi à 9 h 00.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 58,
+        "prompt_tokens": 465,
+        "total_tokens": 523,
+        "prompt_tokens_details": {
+          "cached_tokens": 464
+        }
+      },
+      "ttft_ms": 145.02,
+      "server_timings": {
+        "cache_n": 464,
+        "prompt_n": 1,
+        "prompt_ms": 125.501,
+        "prompt_per_token_ms": 125.501,
+        "prompt_per_second": 7.9680639994900435,
+        "predicted_n": 58,
+        "predicted_ms": 3693.686,
+        "predicted_per_token_ms": 64.80150877192983,
+        "predicted_per_second": 15.431739460257315
+      }
+    },
+    {
+      "id": "bilingual_shadow",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 29623.94,
+      "memory": {
+        "working_set_bytes": 3006730240,
+        "peak_working_set_bytes": 3028451328
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          260
+        ],
+        "oriented_size": [
+          1000,
+          260
+        ],
+        "prepared_size": [
+          1000,
+          260
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "cb35080e83adb68577a5b1d98518408a304d349238a150f080529397344f3288",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "original",
+            "index": 0,
+            "text": ":00",
+            "alternatives": [
+              "9:00"
+            ],
+            "bbox": [
+              502,
+              46,
+              543,
+              66
+            ],
+            "confidence": 91.109039
+          },
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [
+              ":00"
+            ],
+            "bbox": [
+              483,
+              46,
+              543,
+              66
+            ],
+            "confidence": 94.882263
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "9",
+            "alternatives": [],
+            "bbox": [
+              483,
+              96,
+              497,
+              116
+            ],
+            "confidence": 92.712509
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              ":00",
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "9"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"The library reopens Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"La bibliothèque rouvre mardi à 9 h 00.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 58,
+        "prompt_tokens": 1375,
+        "total_tokens": 1433,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 25658.96,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 1375,
+        "prompt_ms": 25584.878,
+        "prompt_per_token_ms": 18.607184,
+        "prompt_per_second": 53.74268347107225,
+        "predicted_n": 58,
+        "predicted_ms": 3920.042,
+        "predicted_per_token_ms": 68.77266666666667,
+        "predicted_per_second": 14.540660533739182
+      }
+    },
+    {
+      "id": "bilingual_shadow",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "text": "The library reopens Tuesday at 9:00 AM.\n\nLa bibliothèque rouvre mardi à 9 h 00.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 3832.05,
+      "memory": {
+        "working_set_bytes": 3005054976,
+        "peak_working_set_bytes": 3028451328
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          260
+        ],
+        "oriented_size": [
+          1000,
+          260
+        ],
+        "prepared_size": [
+          1000,
+          260
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "cb35080e83adb68577a5b1d98518408a304d349238a150f080529397344f3288",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "9 h 00"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "original",
+            "index": 0,
+            "text": ":00",
+            "alternatives": [
+              "9:00"
+            ],
+            "bbox": [
+              502,
+              46,
+              543,
+              66
+            ],
+            "confidence": 91.109039
+          },
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [
+              ":00"
+            ],
+            "bbox": [
+              483,
+              46,
+              543,
+              66
+            ],
+            "confidence": 94.882263
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "9",
+            "alternatives": [],
+            "bbox": [
+              483,
+              96,
+              497,
+              116
+            ],
+            "confidence": 92.712509
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              ":00",
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "9"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"The library reopens Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"La bibliothèque rouvre mardi à 9 h 00.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 58,
+        "prompt_tokens": 1375,
+        "total_tokens": 1433,
+        "prompt_tokens_details": {
+          "cached_tokens": 1374
+        }
+      },
+      "ttft_ms": 100.58,
+      "server_timings": {
+        "cache_n": 1374,
+        "prompt_n": 1,
+        "prompt_ms": 71.848,
+        "prompt_per_token_ms": 71.848,
+        "prompt_per_second": 13.918271907359982,
+        "predicted_n": 58,
+        "predicted_ms": 3672.004,
+        "predicted_per_token_ms": 64.42112280701754,
+        "predicted_per_second": 15.522858907561103
+      }
+    },
+    {
+      "id": "columns_photo",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.005714285714285714,
+        "wer": 0.030303030303030304,
+        "critical_reference": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANCAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANCAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 47210.34,
+      "memory": {
+        "working_set_bytes": 3212980224,
+        "peak_working_set_bytes": 3239411712
+      },
+      "image_preparation": {
+        "raw_size": [
+          1200,
+          284
+        ],
+        "oriented_size": [
+          1200,
+          284
+        ],
+        "prepared_size": [
+          1200,
+          284
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "f265484ba8001a532875776e85748453c16844a1694c8bbd75aa658ade120af6",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [],
+            "bbox": [
+              277,
+              101,
+              329,
+              118
+            ],
+            "confidence": 95.881302
+          },
+          {
+            "source": "candidate",
+            "index": 8,
+            "text": "$12.50.",
+            "alternatives": [],
+            "bbox": [
+              199,
+              144,
+              290,
+              164
+            ],
+            "confidence": 95.851624
+          },
+          {
+            "source": "candidate",
+            "index": 11,
+            "text": "5",
+            "alternatives": [],
+            "bbox": [
+              258,
+              185,
+              270,
+              203
+            ],
+            "confidence": 96.808731
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "$12.50."
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"ENGLISH NOTICE\\n\\nOpen Tuesday at 9:00 AM.\\nAdmission $12.50.\\n\\nChildren under 5 enter free.\"\n    },\n    {\n      \"text\": \"AVIS EN FRANCAIS\\n\\nOuvert mardi à 9 h 00.\\n\\nEntrée 12,50 $.\\n\\nGratuit pour les moins de 5 ans.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 108,
+        "prompt_tokens": 1885,
+        "total_tokens": 1993,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 39482.27,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 1885,
+        "prompt_ms": 39370.471,
+        "prompt_per_token_ms": 20.88619151193634,
+        "prompt_per_second": 47.878522967124276,
+        "predicted_n": 108,
+        "predicted_ms": 7672.177,
+        "predicted_per_token_ms": 71.70258878504673,
+        "predicted_per_second": 13.946497845396424
+      }
+    },
+    {
+      "id": "columns_photo",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.005714285714285714,
+        "wer": 0.030303030303030304,
+        "critical_reference": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANCAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANCAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 9231.45,
+      "memory": {
+        "working_set_bytes": 3211501568,
+        "peak_working_set_bytes": 3239411712
+      },
+      "image_preparation": {
+        "raw_size": [
+          1200,
+          284
+        ],
+        "oriented_size": [
+          1200,
+          284
+        ],
+        "prepared_size": [
+          1200,
+          284
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "f265484ba8001a532875776e85748453c16844a1694c8bbd75aa658ade120af6",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [],
+            "bbox": [
+              277,
+              101,
+              329,
+              118
+            ],
+            "confidence": 95.881302
+          },
+          {
+            "source": "candidate",
+            "index": 8,
+            "text": "$12.50.",
+            "alternatives": [],
+            "bbox": [
+              199,
+              144,
+              290,
+              164
+            ],
+            "confidence": 95.851624
+          },
+          {
+            "source": "candidate",
+            "index": 11,
+            "text": "5",
+            "alternatives": [],
+            "bbox": [
+              258,
+              185,
+              270,
+              203
+            ],
+            "confidence": 96.808731
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "$12.50."
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"ENGLISH NOTICE\\n\\nOpen Tuesday at 9:00 AM.\\nAdmission $12.50.\\n\\nChildren under 5 enter free.\"\n    },\n    {\n      \"text\": \"AVIS EN FRANCAIS\\n\\nOuvert mardi à 9 h 00.\\n\\nEntrée 12,50 $.\\n\\nGratuit pour les moins de 5 ans.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 108,
+        "prompt_tokens": 1885,
+        "total_tokens": 1993,
+        "prompt_tokens_details": {
+          "cached_tokens": 1884
+        }
+      },
+      "ttft_ms": 85.39,
+      "server_timings": {
+        "cache_n": 1884,
+        "prompt_n": 1,
+        "prompt_ms": 65.404,
+        "prompt_per_token_ms": 65.404,
+        "prompt_per_second": 15.289584734878602,
+        "predicted_n": 108,
+        "predicted_ms": 9101.355,
+        "predicted_per_token_ms": 85.05939252336448,
+        "predicted_per_second": 11.756491203782295
+      }
+    },
+    {
+      "id": "columns_photo",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\n\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANÇAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\n\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANÇAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "model_interpretation_requires_review",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 25527.25,
+      "memory": {
+        "working_set_bytes": 3382165504,
+        "peak_working_set_bytes": 3444191232
+      },
+      "image_preparation": {
+        "raw_size": [
+          1200,
+          284
+        ],
+        "oriented_size": [
+          1200,
+          284
+        ],
+        "prepared_size": [
+          1200,
+          284
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "f265484ba8001a532875776e85748453c16844a1694c8bbd75aa658ade120af6",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [],
+            "bbox": [
+              277,
+              101,
+              329,
+              118
+            ],
+            "confidence": 95.881302
+          },
+          {
+            "source": "candidate",
+            "index": 8,
+            "text": "$12.50.",
+            "alternatives": [],
+            "bbox": [
+              199,
+              144,
+              290,
+              164
+            ],
+            "confidence": 95.851624
+          },
+          {
+            "source": "candidate",
+            "index": 11,
+            "text": "5",
+            "alternatives": [],
+            "bbox": [
+              258,
+              185,
+              270,
+              203
+            ],
+            "confidence": 96.808731
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "$12.50."
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [
+          "FRANCAIS"
+        ],
+        "unsupported_additions": [
+          "FRANÇAIS"
+        ],
+        "uncertain_corrections": [
+          {
+            "kind": "replace",
+            "ocr_text": "FRANCAIS",
+            "model_text": "FRANÇAIS",
+            "verification": "not_performed"
+          }
+        ],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"ENGLISH NOTICE\"\n    },\n    {\n      \"text\": \"Open Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"Admission $12.50.\"\n    },\n    {\n      \"text\": \"Children under 5 enter free.\"\n    },\n    {\n      \"text\": \"AVIS EN FRANÇAIS\"\n    },\n    {\n      \"text\": \"Ouvert mardi à 9 h 00.\"\n    },\n    {\n      \"text\": \"Entrée 12,50 $.\"\n    },\n    {\n      \"text\": \"Gratuit pour les moins de 5 ans.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 154,
+        "prompt_tokens": 559,
+        "total_tokens": 713,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 16219.38,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 559,
+        "prompt_ms": 16040.284,
+        "prompt_per_token_ms": 28.69460465116279,
+        "prompt_per_second": 34.84975702425219,
+        "predicted_n": 154,
+        "predicted_ms": 9265.094,
+        "predicted_per_token_ms": 60.556169934640515,
+        "predicted_per_second": 16.513593925760496
+      }
+    },
+    {
+      "id": "columns_photo",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_output": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\n\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANÇAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "text": "ENGLISH NOTICE\n\nOpen Tuesday at 9:00 AM.\n\nAdmission $12.50.\n\nChildren under 5 enter free.\n\nAVIS EN FRANÇAIS\n\nOuvert mardi à 9 h 00.\n\nEntrée 12,50 $.\n\nGratuit pour les moins de 5 ans.",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "model_interpretation_requires_review",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 10447.66,
+      "memory": {
+        "working_set_bytes": 3380125696,
+        "peak_working_set_bytes": 3444191232
+      },
+      "image_preparation": {
+        "raw_size": [
+          1200,
+          284
+        ],
+        "oriented_size": [
+          1200,
+          284
+        ],
+        "prepared_size": [
+          1200,
+          284
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "f265484ba8001a532875776e85748453c16844a1694c8bbd75aa658ade120af6",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "model_numeric_observations": [
+          "9:00 AM",
+          "$12.50",
+          "5",
+          "9 h 00",
+          "12,50 $",
+          "5"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 5,
+            "text": "9:00",
+            "alternatives": [],
+            "bbox": [
+              277,
+              101,
+              329,
+              118
+            ],
+            "confidence": 95.881302
+          },
+          {
+            "source": "candidate",
+            "index": 8,
+            "text": "$12.50.",
+            "alternatives": [],
+            "bbox": [
+              199,
+              144,
+              290,
+              164
+            ],
+            "confidence": 95.851624
+          },
+          {
+            "source": "candidate",
+            "index": 11,
+            "text": "5",
+            "alternatives": [],
+            "bbox": [
+              258,
+              185,
+              270,
+              203
+            ],
+            "confidence": 96.808731
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "9:00"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "$12.50."
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [
+          "FRANCAIS"
+        ],
+        "unsupported_additions": [
+          "FRANÇAIS"
+        ],
+        "uncertain_corrections": [
+          {
+            "kind": "replace",
+            "ocr_text": "FRANCAIS",
+            "model_text": "FRANÇAIS",
+            "verification": "not_performed"
+          }
+        ],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"ENGLISH NOTICE\"\n    },\n    {\n      \"text\": \"Open Tuesday at 9:00 AM.\"\n    },\n    {\n      \"text\": \"Admission $12.50.\"\n    },\n    {\n      \"text\": \"Children under 5 enter free.\"\n    },\n    {\n      \"text\": \"AVIS EN FRANÇAIS\"\n    },\n    {\n      \"text\": \"Ouvert mardi à 9 h 00.\"\n    },\n    {\n      \"text\": \"Entrée 12,50 $.\"\n    },\n    {\n      \"text\": \"Gratuit pour les moins de 5 ans.\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 158,
+        "prompt_tokens": 559,
+        "total_tokens": 717,
+        "prompt_tokens_details": {
+          "cached_tokens": 558
+        }
+      },
+      "ttft_ms": 235.01,
+      "server_timings": {
+        "cache_n": 558,
+        "prompt_n": 1,
+        "prompt_ms": 48.986,
+        "prompt_per_token_ms": 48.986,
+        "prompt_per_second": 20.41399583554485,
+        "predicted_n": 158,
+        "predicted_ms": 10302.737,
+        "predicted_per_token_ms": 65.62252866242038,
+        "predicted_per_second": 15.238669103171326
+      }
+    },
+    {
+      "id": "nutrition_photo",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_output": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "Nutrition Facts / Valeur nutritive\n\nPer 125 g / pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "text": "Nutrition Facts / Valeur nutritive\n\nPer 125 g / pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "model_interpretation_requires_review",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 18713.66,
+      "memory": {
+        "working_set_bytes": 3463548928,
+        "peak_working_set_bytes": 3491110912
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          330
+        ],
+        "oriented_size": [
+          1000,
+          330
+        ],
+        "prepared_size": [
+          1000,
+          330
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "6c41f8c5f20920a3abc15f13f3fc43c662a91175af245ea84f6d70bf91a57a40",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "model_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 6,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              109,
+              89,
+              151,
+              108
+            ],
+            "confidence": 92.63475
+          },
+          {
+            "source": "candidate",
+            "index": 9,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              266,
+              94,
+              308,
+              112
+            ],
+            "confidence": 95.81633
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "120",
+            "alternatives": [],
+            "bbox": [
+              169,
+              133,
+              213,
+              152
+            ],
+            "confidence": 96.456841
+          },
+          {
+            "source": "candidate",
+            "index": 14,
+            "text": "1.5",
+            "alternatives": [],
+            "bbox": [
+              107,
+              175,
+              142,
+              193
+            ],
+            "confidence": 92.557335
+          },
+          {
+            "source": "candidate",
+            "index": 16,
+            "text": "2%",
+            "alternatives": [],
+            "bbox": [
+              177,
+              177,
+              213,
+              194
+            ],
+            "confidence": 96.558731
+          },
+          {
+            "source": "candidate",
+            "index": 18,
+            "text": "230",
+            "alternatives": [],
+            "bbox": [
+              163,
+              219,
+              208,
+              237
+            ],
+            "confidence": 96.322876
+          },
+          {
+            "source": "candidate",
+            "index": 20,
+            "text": "10%",
+            "alternatives": [],
+            "bbox": [
+              265,
+              221,
+              316,
+              239
+            ],
+            "confidence": 96.631393
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "125"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "120"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "1.5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "2%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "230"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "10%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [
+          "g/"
+        ],
+        "unsupported_additions": [
+          "/",
+          "g"
+        ],
+        "uncertain_corrections": [
+          {
+            "kind": "replace",
+            "ocr_text": "g/",
+            "model_text": "g /",
+            "verification": "not_performed"
+          }
+        ],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"Nutrition Facts / Valeur nutritive\"\n    },\n    {\n      \"text\": \"Per 125 g / pour 125 g\"\n    },\n    {\n      \"text\": \"Calories 120\"\n    },\n    {\n      \"text\": \"Fat 1.5 g 2%\"\n    },\n    {\n      \"text\": \"Sodium 230 mg 10%\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 105,
+        "prompt_tokens": 527,
+        "total_tokens": 632,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 13653.8,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 527,
+        "prompt_ms": 13577.168,
+        "prompt_per_token_ms": 25.763127134724858,
+        "prompt_per_second": 38.815163810302714,
+        "predicted_n": 105,
+        "predicted_ms": 4996.409,
+        "predicted_per_token_ms": 48.042394230769226,
+        "predicted_per_second": 20.814949296584807
+      }
+    },
+    {
+      "id": "nutrition_photo",
+      "mode": "vision_only",
+      "accuracy": {
+        "cer": 0.0,
+        "wer": 0.0,
+        "critical_reference": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_output": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "Nutrition Facts / Valeur nutritive\n\nPer 125 g / pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "text": "Nutrition Facts / Valeur nutritive\n\nPer 125 g / pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "model_interpretation_requires_review",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 5430.92,
+      "memory": {
+        "working_set_bytes": 3461861376,
+        "peak_working_set_bytes": 3491110912
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          330
+        ],
+        "oriented_size": [
+          1000,
+          330
+        ],
+        "prepared_size": [
+          1000,
+          330
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "6c41f8c5f20920a3abc15f13f3fc43c662a91175af245ea84f6d70bf91a57a40",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "model_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 6,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              109,
+              89,
+              151,
+              108
+            ],
+            "confidence": 92.63475
+          },
+          {
+            "source": "candidate",
+            "index": 9,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              266,
+              94,
+              308,
+              112
+            ],
+            "confidence": 95.81633
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "120",
+            "alternatives": [],
+            "bbox": [
+              169,
+              133,
+              213,
+              152
+            ],
+            "confidence": 96.456841
+          },
+          {
+            "source": "candidate",
+            "index": 14,
+            "text": "1.5",
+            "alternatives": [],
+            "bbox": [
+              107,
+              175,
+              142,
+              193
+            ],
+            "confidence": 92.557335
+          },
+          {
+            "source": "candidate",
+            "index": 16,
+            "text": "2%",
+            "alternatives": [],
+            "bbox": [
+              177,
+              177,
+              213,
+              194
+            ],
+            "confidence": 96.558731
+          },
+          {
+            "source": "candidate",
+            "index": 18,
+            "text": "230",
+            "alternatives": [],
+            "bbox": [
+              163,
+              219,
+              208,
+              237
+            ],
+            "confidence": 96.322876
+          },
+          {
+            "source": "candidate",
+            "index": 20,
+            "text": "10%",
+            "alternatives": [],
+            "bbox": [
+              265,
+              221,
+              316,
+              239
+            ],
+            "confidence": 96.631393
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "125"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "120"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "1.5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "2%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "230"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "10%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [
+          "g/"
+        ],
+        "unsupported_additions": [
+          "/",
+          "g"
+        ],
+        "uncertain_corrections": [
+          {
+            "kind": "replace",
+            "ocr_text": "g/",
+            "model_text": "g /",
+            "verification": "not_performed"
+          }
+        ],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"Nutrition Facts / Valeur nutritive\"\n    },\n    {\n      \"text\": \"Per 125 g / pour 125 g\"\n    },\n    {\n      \"text\": \"Calories 120\"\n    },\n    {\n      \"text\": \"Fat 1.5 g 2%\"\n    },\n    {\n      \"text\": \"Sodium 230 mg 10%\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 105,
+        "prompt_tokens": 527,
+        "total_tokens": 632,
+        "prompt_tokens_details": {
+          "cached_tokens": 526
+        }
+      },
+      "ttft_ms": 78.89,
+      "server_timings": {
+        "cache_n": 526,
+        "prompt_n": 1,
+        "prompt_ms": 50.469,
+        "prompt_per_token_ms": 50.469,
+        "prompt_per_second": 19.814143335512888,
+        "predicted_n": 105,
+        "predicted_ms": 5293.439,
+        "predicted_per_token_ms": 50.89845192307693,
+        "predicted_per_second": 19.646962966797197
+      }
+    },
+    {
+      "id": "nutrition_photo",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.009900990099009901,
+        "wer": 0.09090909090909091,
+        "critical_reference": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_output": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 0,
+      "status": "needs_review",
+      "model_text": "Nutrition Facts / Valeur nutritive\nPer 125 g/ pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "text": "Nutrition Facts / Valeur nutritive\nPer 125 g/ pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 39651.1,
+      "memory": {
+        "working_set_bytes": 3535937536,
+        "peak_working_set_bytes": 3563110400
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          330
+        ],
+        "oriented_size": [
+          1000,
+          330
+        ],
+        "prepared_size": [
+          1000,
+          330
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "6c41f8c5f20920a3abc15f13f3fc43c662a91175af245ea84f6d70bf91a57a40",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "model_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 6,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              109,
+              89,
+              151,
+              108
+            ],
+            "confidence": 92.63475
+          },
+          {
+            "source": "candidate",
+            "index": 9,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              266,
+              94,
+              308,
+              112
+            ],
+            "confidence": 95.81633
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "120",
+            "alternatives": [],
+            "bbox": [
+              169,
+              133,
+              213,
+              152
+            ],
+            "confidence": 96.456841
+          },
+          {
+            "source": "candidate",
+            "index": 14,
+            "text": "1.5",
+            "alternatives": [],
+            "bbox": [
+              107,
+              175,
+              142,
+              193
+            ],
+            "confidence": 92.557335
+          },
+          {
+            "source": "candidate",
+            "index": 16,
+            "text": "2%",
+            "alternatives": [],
+            "bbox": [
+              177,
+              177,
+              213,
+              194
+            ],
+            "confidence": 96.558731
+          },
+          {
+            "source": "candidate",
+            "index": 18,
+            "text": "230",
+            "alternatives": [],
+            "bbox": [
+              163,
+              219,
+              208,
+              237
+            ],
+            "confidence": 96.322876
+          },
+          {
+            "source": "candidate",
+            "index": 20,
+            "text": "10%",
+            "alternatives": [],
+            "bbox": [
+              265,
+              221,
+              316,
+              239
+            ],
+            "confidence": 96.631393
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "125"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "120"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "1.5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "2%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "230"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "10%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"Nutrition Facts / Valeur nutritive\\nPer 125 g/ pour 125 g\\n\\nCalories 120\\n\\nFat 1.5 g 2%\\n\\nSodium 230 mg 10%\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 73,
+        "prompt_tokens": 2044,
+        "total_tokens": 2117,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "ttft_ms": 34544.4,
+      "server_timings": {
+        "cache_n": 0,
+        "prompt_n": 2044,
+        "prompt_ms": 34491.349,
+        "prompt_per_token_ms": 16.874436888454014,
+        "prompt_per_second": 59.26123678143177,
+        "predicted_n": 73,
+        "predicted_ms": 5033.623,
+        "predicted_per_token_ms": 69.91143055555555,
+        "predicted_per_second": 14.303812581911679
+      }
+    },
+    {
+      "id": "nutrition_photo",
+      "mode": "hybrid",
+      "accuracy": {
+        "cer": 0.009900990099009901,
+        "wer": 0.09090909090909091,
+        "critical_reference": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_output": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "critical_literals_missing_or_changed": [],
+        "critical_literals_added_or_changed": [],
+        "policy": "NFC + collapsed whitespace for CER/WER; case/accents/punctuation retained. Critical literal differences need manual classification, not all are quantity errors."
+      },
+      "repetition": 1,
+      "status": "needs_review",
+      "model_text": "Nutrition Facts / Valeur nutritive\nPer 125 g/ pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "text": "Nutrition Facts / Valeur nutritive\nPer 125 g/ pour 125 g\n\nCalories 120\n\nFat 1.5 g 2%\n\nSodium 230 mg 10%",
+      "warnings": [
+        "source_numeric_conflicts_preserved",
+        "source_ocr_requires_attention"
+      ],
+      "processing_ms": 5416.43,
+      "memory": {
+        "working_set_bytes": 3534540800,
+        "peak_working_set_bytes": 3563110400
+      },
+      "image_preparation": {
+        "raw_size": [
+          1000,
+          330
+        ],
+        "oriented_size": [
+          1000,
+          330
+        ],
+        "prepared_size": [
+          1000,
+          330
+        ],
+        "max_edge": 1280,
+        "prepared_sha256": "6c41f8c5f20920a3abc15f13f3fc43c662a91175af245ea84f6d70bf91a57a40",
+        "preparation": "EXIF orientation, alpha on white, RGB PNG, bounded Lanczos resize"
+      },
+      "comparison": {
+        "ocr_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "model_numeric_observations": [
+          "125 g",
+          "125 g",
+          "120",
+          "1.5 g",
+          "2%",
+          "230 mg",
+          "10%"
+        ],
+        "numeric_disagreements": {
+          "ocr_literals_missing_or_changed": [],
+          "model_literals_introduced_or_changed": [],
+          "possible_representation_changes": []
+        },
+        "source_numeric_conflicts": [
+          {
+            "source": "candidate",
+            "index": 6,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              109,
+              89,
+              151,
+              108
+            ],
+            "confidence": 92.63475
+          },
+          {
+            "source": "candidate",
+            "index": 9,
+            "text": "125",
+            "alternatives": [],
+            "bbox": [
+              266,
+              94,
+              308,
+              112
+            ],
+            "confidence": 95.81633
+          },
+          {
+            "source": "candidate",
+            "index": 12,
+            "text": "120",
+            "alternatives": [],
+            "bbox": [
+              169,
+              133,
+              213,
+              152
+            ],
+            "confidence": 96.456841
+          },
+          {
+            "source": "candidate",
+            "index": 14,
+            "text": "1.5",
+            "alternatives": [],
+            "bbox": [
+              107,
+              175,
+              142,
+              193
+            ],
+            "confidence": 92.557335
+          },
+          {
+            "source": "candidate",
+            "index": 16,
+            "text": "2%",
+            "alternatives": [],
+            "bbox": [
+              177,
+              177,
+              213,
+              194
+            ],
+            "confidence": 96.558731
+          },
+          {
+            "source": "candidate",
+            "index": 18,
+            "text": "230",
+            "alternatives": [],
+            "bbox": [
+              163,
+              219,
+              208,
+              237
+            ],
+            "confidence": 96.322876
+          },
+          {
+            "source": "candidate",
+            "index": 20,
+            "text": "10%",
+            "alternatives": [],
+            "bbox": [
+              265,
+              221,
+              316,
+              239
+            ],
+            "confidence": 96.631393
+          }
+        ],
+        "source_numeric_disputes": [
+          {
+            "literal_readings": [
+              "125"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "120"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "1.5"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "2%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "230"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          },
+          {
+            "literal_readings": [
+              "10%"
+            ],
+            "kind": "unresolved_literal_or_unit_disagreement",
+            "verification": "not_performed"
+          }
+        ],
+        "omissions": [],
+        "unsupported_additions": [],
+        "uncertain_corrections": [],
+        "interpretation": "Differences from OCR are unverified review candidates, not confirmed hallucinations or corrections. Reordering may appear in sequence differences."
+      },
+      "raw_model_json": "{\n  \"sections\": [\n    {\n      \"text\": \"Nutrition Facts / Valeur nutritive\\nPer 125 g/ pour 125 g\\n\\nCalories 120\\n\\nFat 1.5 g 2%\\n\\nSodium 230 mg 10%\"\n    }\n  ]\n}",
+      "finish_reason": "stop",
+      "usage": {
+        "completion_tokens": 73,
+        "prompt_tokens": 2044,
+        "total_tokens": 2117,
+        "prompt_tokens_details": {
+          "cached_tokens": 2043
+        }
+      },
+      "ttft_ms": 92.15,
+      "server_timings": {
+        "cache_n": 2043,
+        "prompt_n": 1,
+        "prompt_ms": 74.453,
+        "prompt_per_token_ms": 74.453,
+        "prompt_per_second": 13.431292224624931,
+        "predicted_n": 73,
+        "predicted_ms": 5259.386,
+        "predicted_per_token_ms": 73.04702777777779,
+        "predicted_per_second": 13.689810939908194
+      }
+    }
+  ],
+  "assessment": {
+    "reviewer": "Coding assistant; not independent human validation.",
+    "reading_order": "Correct in OCR, vision-only and hybrid; no demonstrated order improvement.",
+    "numeric_hallucinations_observed": false,
+    "vision_only_changes": "Restored cedilla in FRAN?AIS and spacing in 125 g / pour.",
+    "hybrid_changes": "Retained OCR accent/spacing errors; no accuracy improvement on these examples.",
+    "recommendation": "Keep opt-in; real-photo validation pending."
+  }
+}

@@ -2,7 +2,9 @@
 with the same name in uppercase (e.g. AI_BASE_URL)."""
 
 from functools import lru_cache
+from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +14,11 @@ class Settings(BaseSettings):
     # Where the AI service runs. Compose overrides this with http://ai:8000.
     ai_base_url: str = "http://localhost:9000"
     ai_timeout_seconds: float = 120.0
+    image_processing_mode: Literal["ocr_service", "document"] = "ocr_service"
+    document_cache_dir: str = "data/documents"
+    document_timeout_seconds: float = Field(default=600.0, gt=0, allow_inf_nan=False)
+    max_image_pixels: int = Field(default=40_000_000, gt=0)
+    signspeak_llm_url: str = "http://127.0.0.1:8091"
 
     # Runtime files: sqlite database and generated mp3s. Compose points these at /data.
     db_path: str = "data/app.db"

@@ -60,6 +60,48 @@ Response:
 Errors: `404` unknown session, `413` image too large, `415` not an image,
 `422` no readable text found.
 
+### Vision-first upload mode
+
+With backend `IMAGE_PROCESSING_MODE=document`, the same image route calls the
+local `DocumentProcessor` instead of the OCR HTTP service. It also returns:
+
+- `document_id`, `status`, `selected_method`, `printed_text_status`
+- ordered `sections`, `visual_descriptions`, `text_observations`, `warnings`
+- `ocr_comparison`, `guardrails`, `cache_hit`, `execution_this_call`
+
+`needs_review` means successful selection of unverified vision content.
+`ocr_unreviewed_fallback` is a labelled fallback, not vision success; the UI
+disables read-aloud for it. A symbol-only result can have empty `text`.
+The UI shows descriptions separately from printed text and exposes the metadata.
+Invalid image bytes return `422`, excessive dimensions return `413`, processing
+failure returns `502`, deadline expiry returns `504`, and a busy processor or
+missing AI installation returns `503`. Structured errors have
+`detail.message`, `detail.status`, and available stage/error/warning metadata.
+
+`GET /v1/sessions/{id}/document` returns `{ "session_id": "...", "document": {...} }`
+from persistent SQLite storage without rerunning OCR or vision. Normal session
+retrieval also includes nullable `document_id` and `document_status`.
+New scans reset backend history. Browser page-reload recovery is not wired yet.
+
+The scan itself returns an empty `audio_url`. Read-aloud uses
+`POST /v1/sessions/{id}/read` with form `language=en|fr` and optional
+`include_visual_descriptions=true`. It returns `{ "audio_url": "...wav",
+"metadata": {...} }`; media is served as `audio/wav`.
+
+In document mode, chat accepts form `message` and `language=en|fr` (default en).
+The result includes the existing `transcript`, `reply`, `audio_url`, plus
+`status` (`ok`, `text_only`, `blocked`), `language`, `guardrails`, `warnings`,
+`errors`, `timings` and `history_turns`. History is restored in full from SQLite.
+Piper failures preserve the text answer; blocked turns have no audio/history
+entry and must not be spoken. Qwen failures return `502`. Missing/failed/fallback
+documents return `409`; unsupported languages return `422`. Uploads/read/Q&A
+share a single inference slot, returning `503` if busy.
+
+The UI uses server WAV playback for documents and answers, with pause/stop/rate.
+There is no word highlighting for WAV. Selected text is read-only to keep Q&A
+context consistent. The microphone stays disabled in document mode until the
+transcript-review flow is integrated; raw chat audio currently returns `422`.
+
 ## `POST /v1/sessions/{session_id}/audio`
 
 Voice clip from the microphone. **Stores it and returns a playable URL; it

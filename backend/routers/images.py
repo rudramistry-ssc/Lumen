@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 
 from config import get_settings
 from models.schemas import ScanOut
-from services import ai_client, session_service, storage_service
+from services import ai_client, document_service, session_service, storage_service
 
 router = APIRouter(tags=["images"])
 
@@ -18,17 +18,26 @@ async def upload_image(session_id: str, file: UploadFile):
     if session_service.get_session(session_id) is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    data = await file.read()
+    settings = get_settings()
+    limit = settings.max_upload_mb * 1024 * 1024
+    if settings.image_processing_mode == "document":
+        limit = min(limit, 25_000_000)  # DocumentProcessor's original-byte limit.
+    data = await file.read(limit + 1)
 
     # Cheap guards before we spend time on the AI service.
     if not data:
         raise HTTPException(status_code=422, detail="Empty file")
-    if len(data) > get_settings().max_upload_mb * 1024 * 1024:
+    if len(data) > limit:
         raise HTTPException(status_code=413, detail="Image too large")
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=415, detail="Expected an image")
 
     started = time.perf_counter()
+
+    if settings.image_processing_mode == "document":
+        response = await document_service.process_document(session_id, data)
+        response.ms = int((time.perf_counter() - started) * 1000)
+        return response
 
     # The AI side owns image handling (EXIF, HEIC, OCR); we forward raw bytes.
     result = await ai_client.ocr(data, file.filename or "upload", file.content_type)

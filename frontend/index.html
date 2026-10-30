@@ -224,6 +224,7 @@
           <div class="extract-head">
             <label for="lang-select" class="mono-label" data-i18n="detected">Detected language</label>
             <select id="lang-select" class="lang-select" disabled>
+              <option value="" data-i18n="unknownLanguage">Not detected</option>
               <option value="en">English</option>
               <option value="fr">Français</option>
               <option value="mixed" data-i18n="mixed">English + French</option>
@@ -245,6 +246,18 @@
           <div id="reading-view" class="extracted-text reading-view" hidden aria-hidden="true"></div>
           <p id="extract-hint" class="hint" data-i18n="editHint">You can fix any mistakes before listening.</p>
           <p id="extract-error" class="error" role="alert" hidden></p>
+          <section id="document-review" class="document-review" aria-live="polite" hidden>
+            <p id="document-status" class="hint"></p>
+            <ul id="document-warnings" class="hint"></ul>
+            <div id="document-visuals" hidden>
+              <p class="mono-label" data-i18n="visualDescriptions">Visual interpretations (not printed words)</p>
+              <ul id="document-descriptions" class="hint"></ul>
+            </div>
+            <details>
+              <summary data-i18n="documentDetails">Document details and processing metadata</summary>
+              <pre id="document-metadata"></pre>
+            </details>
+          </section>
 
           <div class="divider"></div>
 

@@ -47,6 +47,10 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 .skip-link:focus { top: 12px; }
 .mono-label { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-3); }
 .mono-dim { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-5); letter-spacing: 0; }
+.document-review { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.document-review ul { padding-left: 20px; }
+.document-review summary { color: var(--ink-3); cursor: pointer; font-size: 0.85rem; }
+.document-review pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.75rem; }
 
 /* ---------- shared: pills, segments, logo, eyebrow ---------- */
 .pill {

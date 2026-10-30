@@ -1,4 +1,4 @@
-"""SQLite storage: two tables, no ORM, no migrations. init_db() is idempotent."""
+"""SQLite storage. init_db() also upgrades existing PoC databases."""
 
 import sqlite3
 from contextlib import contextmanager
@@ -25,6 +25,13 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_session
     ON messages (session_id, id);
+
+CREATE TABLE IF NOT EXISTS documents (
+    session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    document_id TEXT,
+    status TEXT NOT NULL,
+    result_json TEXT NOT NULL
+);
 """
 
 

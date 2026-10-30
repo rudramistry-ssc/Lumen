@@ -42,6 +42,10 @@ def save_audio(data: bytes) -> str:
     return _write(data, ".mp3")
 
 
+def save_wav(data: bytes) -> str:
+    return _write(data, ".wav")
+
+
 def clip_extension(content_type: str, filename: str = "") -> str | None:
     # Content-Type wins; the filename is a fallback for clients that send
     # application/octet-stream. None means "unsupported", which becomes a 415.

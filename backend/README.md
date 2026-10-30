@@ -1,7 +1,83 @@
 # CanAI Team E — backend
 
 Thin orchestration API. It owns sessions, uploads, audio files, and SQLite.
-All OCR / TTS / STT / chat logic lives in the separate AI service.
+Legacy mode uses the OCR HTTP service. Document mode calls the local AI packages
+and a persistent Qwen server.
+
+## Vision-first integration milestone
+
+The AI branch is now combined with the application on `integration/offline-poc`.
+The existing Docker Compose demo remains OCR-only for now.
+
+To try the new upload path locally, first provision Tesseract (English/French),
+the pinned Qwen model/projector and llama.cpp as described in
+[the AI handoff](../handoff/README.md). Then, in a Python environment:
+
+```bash
+cd backend
+pip install -r requirements-ai.txt
+cp .env.example .env
+# In a separate terminal/environment, start the provisioned Qwen server once:
+python -m signspeak_llm serve --vision --context-size 8192 --threads 4
+# Keep it running, then start the application:
+uvicorn main:app --reload
+```
+
+`IMAGE_PROCESSING_MODE=document` selects `DocumentProcessor`; the default
+`ocr_service` preserves the old HTTP OCR path. Configure `SIGNSPEAK_LLM_URL`,
+`DOCUMENT_CACHE_DIR`, and `DOCUMENT_TIMEOUT_SECONDS` in `.env`.
+The standard bounded AI worker remains enabled. One expensive upload is allowed
+at a time per backend process; uploads, Q&A and Piper share this slot.
+Another request receives `503` and can be retried.
+
+The existing image endpoint now returns selected vision text, `document_id`,
+ordered sections, visual descriptions, uncertainties, OCR comparison, guardrails
+and execution counts. `needs_review` is a completed, unverified vision result.
+`ocr_unreviewed_fallback` is explicitly labelled in the UI, not treated as Qwen
+success. Symbol-only images may return empty text with visual descriptions.
+Failures return `502`; deadline expiry returns `504`.
+
+SQLite stores the full result and session/document association. Retrieve it with
+`GET /v1/sessions/{id}/document`; normal session retrieval includes document ID
+and status. Replacing a scan clears the previous conversation history. Keep both
+the database and document cache persistent: the AI cache also contains original
+image bytes and evidence, so it must not be committed or publicly served.
+
+### Piper and typed conversation
+
+Install `requirements-ai.txt` and provision the English/French Piper voices once,
+as described in [the speech guide](../speech/README.md). In the same environment:
+
+```bash
+python -m signspeak_speech provision en
+python -m signspeak_speech provision fr
+```
+
+- `POST /v1/sessions/{id}/read`: form `language=en|fr` and optional
+  `include_visual_descriptions=true`; returns `audio_url` (WAV) and metadata.
+  Uses `VoiceConversation.read_document`, not image inference.
+- `POST /v1/sessions/{id}/chat`: form `message` and `language=en|fr`;
+  uses `VoiceConversation.answer_question` with the selected document and full
+  history restored from SQLite. Successful pairs are saved atomically.
+- Chat returns `status`, `guardrails`, `warnings`, `errors`, `timings` and
+  `history_turns` alongside the existing transcript/reply/audio URL fields.
+  Blocked turns have no audio and no saved conversation turn. A Piper failure
+  preserves the answer/history as `text_only`. A Qwen failure returns `502`.
+- The UI plays WAV with pause/stop/speed controls, without word-level timing.
+  It does not silently substitute browser speech for document-mode audio.
+  Printed text and uncertainty notices use detected languages (no translation).
+  Generated answers use the selected English/French interface language.
+
+The selected document is read-only in the UI so displayed text and saved Q&A
+context agree. OCR fallback cannot be read or used for chat without explicit
+review. Piper is reused across requests; no model downloads happen in handlers.
+This path is independent of the legacy `TTS_ENABLED` setting.
+
+Reviewed microphone transcription, browser session recovery and full-stack
+model-volume Docker provisioning are still pending. Raw audio submitted to
+document chat is rejected rather than answered before transcript review.
+
+Quick no-model check: `python -B -m unittest discover -s tests -v` from `backend/`.
 
 ## Run with Docker (demo setup)
 
@@ -67,7 +143,7 @@ Chat response:
 - Read aloud / pause: play `audio_url` with a normal `<audio>` element — pause is client-side, no extra endpoint.
 - `language` is a short tag from OCR (`en`, `fr`, …); it is `""` until an image is scanned.
 
-## Contract with the AI service
+## Legacy OCR-service contract
 
 The AI service must expose these under `AI_BASE_URL`:
 
@@ -101,6 +177,3 @@ Notes:
 - Images are forwarded untouched (HEIC/EXIF handling belongs to the AI side).
 - One uvicorn process, no queue, no retries. A slow AI call just means a slow
   request; the timeout is 120s.
-
-
-

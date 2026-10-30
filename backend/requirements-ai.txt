@@ -1,0 +1,8 @@
+# Run pip from backend/. The legacy OCR-service Docker image uses requirements.txt.
+-r requirements.txt
+-e ../ocr[preprocess]
+-e ../llm
+-r ../speech/requirements.txt
+-e ../speech
+-e ../stt
+-e ../voice

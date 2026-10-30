@@ -17,6 +17,8 @@
     text: "",
     language: "en",
     history: [], // [{ role, content }]
+    document: null,
+    extracting: false,
     busy: false,
     stopListening: null,
   };
@@ -45,6 +47,8 @@
     $("chat-input").placeholder = state.text ? t("chatPlaceholder") : t("chatPlaceholderEmpty");
     $("session-label").textContent = `· ${t("session")} ${state.sessionId}`;
     updatePlayButton();
+    renderDocumentReview();
+    if (state.document) $("extract-hint").textContent = t("documentReadHint");
     renderStatus();
   }
 
@@ -102,11 +106,20 @@
   });
 
   async function handleFile(file) {
+    if (state.extracting || state.busy) return;
     showExtractError("");
     if (!file.type.startsWith("image/")) return showExtractError(t("errNotImage"));
     if (file.size > cfg.MAX_IMAGE_MB * 1024 * 1024) return showExtractError(t("errTooBig", { mb: cfg.MAX_IMAGE_MB }));
 
     stopAll();
+    state.extracting = true;
+    state.document = null;
+    state.text = "";
+    $("extracted-text").value = "";
+    $("new-session").disabled = true;
+    $("send-btn").disabled = true;
+    $("mic-btn").disabled = true;
+    renderDocumentReview();
     state.file = file;
     const url = URL.createObjectURL(file);
     $("preview").src = url;
@@ -122,19 +135,27 @@
     try {
       const res = await API.extract(file, state.sessionId);
       await stopStages();
+      state.document = res.status ? res : null;
       state.text = res.text || "";
-      state.language = res.language || "en";
+      state.language = res.language || "";
+      state.history = [];
+      $("messages").textContent = "";
       $("extracted-text").value = state.text;
       $("lang-select").value = state.language;
       $("confidence").textContent = res.confidence != null ? `${Math.round(res.confidence * 100)}%` : "";
       setExtractState("ready");
-      addMessage("assistant", t("gotText", { lang: langName(state.language) }), { speakable: false }).dataset.uiText = "1";
+      addMessage("assistant", res.status ? t("documentReady") : t("gotText", { lang: langName(state.language) }), { speakable: false }).dataset.uiText = "1";
       warnIfNoVoice();
     } catch (err) {
       console.error(err);
       stopStages(true);
       setExtractState("empty");
-      showExtractError(t("errExtract"));
+      showExtractError(`${t("errExtract")} ${err.message || ""}`);
+    } finally {
+      state.extracting = false;
+      $("new-session").disabled = false;
+      $("send-btn").disabled = state.document?.status === "ocr_unreviewed_fallback";
+      $("mic-btn").disabled = !!state.document;
     }
     applyI18n();
   }
@@ -162,16 +183,50 @@
     $("extract-loading").hidden = !loading;
     $("extracted-text").hidden = loading;
     $("extracted-text").disabled = s !== "ready";
+    $("extracted-text").readOnly = !!state.document;
     $("lang-select").disabled = s !== "ready";
-    $("play-btn").disabled = s !== "ready";
+    $("play-btn").disabled = s !== "ready" || (!state.text.trim() && !state.document?.visual_descriptions?.length) || state.document?.status === "ocr_unreviewed_fallback";
     $("stop-btn").disabled = s !== "ready";
     $("copy-btn").disabled = s !== "ready";
-    $("suggestions").hidden = s !== "ready";
-    $("extract-hint").textContent = loading ? t("reading") : t("editHint");
+    $("suggestions").hidden = s !== "ready" || state.document?.status === "ocr_unreviewed_fallback";
+    $("extract-hint").textContent = loading ? t("reading") : t(state.document ? "documentReadHint" : "editHint");
   }
   function showExtractError(msg) { $("extract-error").textContent = msg; $("extract-error").hidden = !msg; }
 
-  $("extracted-text").addEventListener("input", (e) => (state.text = e.target.value));
+  function renderDocumentReview() {
+    const doc = state.document;
+    $("document-review").hidden = !doc;
+    if (!doc) return;
+    $("document-status").textContent = t(doc.status === "ocr_unreviewed_fallback" ? "documentFallback" : "documentNeedsReview");
+    const warnings = $("document-warnings");
+    warnings.textContent = "";
+    for (const warning of doc.warnings || []) {
+      const li = document.createElement("li");
+      li.textContent = typeof warning === "string" ? warning : JSON.stringify(warning);
+      warnings.append(li);
+    }
+    const descriptions = $("document-descriptions");
+    descriptions.textContent = "";
+    for (const description of doc.visual_descriptions || []) {
+      const li = document.createElement("li");
+      li.textContent = description.text;
+      descriptions.append(li);
+    }
+    $("document-visuals").hidden = !(doc.visual_descriptions || []).length;
+    $("document-metadata").textContent = JSON.stringify({
+      session_id: doc.session_id, document_id: doc.document_id,
+      status: doc.status, selected_method: doc.selected_method,
+      printed_text_status: doc.printed_text_status,
+      sections: doc.sections, text_observations: doc.text_observations,
+      ocr_comparison: doc.ocr_comparison, guardrails: doc.guardrails,
+      cache_hit: doc.cache_hit, execution_this_call: doc.execution_this_call,
+    }, null, 2);
+  }
+
+  $("extracted-text").addEventListener("input", (e) => {
+    state.text = e.target.value;
+    $("play-btn").disabled = !state.text.trim() || state.document?.status === "ocr_unreviewed_fallback";
+  });
   $("copy-btn").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(state.text); }
     catch (_) { const ta = $("extracted-text"); ta.focus(); ta.select(); document.execCommand && document.execCommand("copy"); }
@@ -182,6 +237,7 @@
   $("lang-select").addEventListener("change", (e) => { state.language = e.target.value; stopAll(); warnIfNoVoice(); });
 
   function warnIfNoVoice() {
+    if (state.document) return;
     const need = state.language === "mixed" ? ["en", "fr"] : [state.language];
     const missing = need.filter((l) => Speech.supported && speechSynthesis.getVoices().length && !Speech.hasLocalVoice(l));
     if (missing.length) $("extract-hint").textContent = t("noVoice", { lang: missing.map(langName).join(" / ") });
@@ -189,23 +245,85 @@
 
   // ---------- read aloud ----------
   let playing = null; // "source" | message element | null
+  const mediaPlayer = new Audio();
+  let playbackGeneration = 0;
+  let readingDocument = false;
+  function playbackEnded() { playing = null; refreshPlaying(); }
+  mediaPlayer.addEventListener("ended", playbackEnded);
+  mediaPlayer.addEventListener("pause", updatePlayButton);
+  mediaPlayer.addEventListener("play", updatePlayButton);
+  mediaPlayer.addEventListener("error", () => {
+    playbackEnded();
+    showExtractError(t("errPlayback"));
+  });
   function updatePlayButton() {
     const srcPlaying = playing === "source";
-    const paused = srcPlaying && Speech.paused;
+    const paused = srcPlaying && (state.document ? mediaPlayer.paused : Speech.paused);
     $("play-label").textContent = !srcPlaying ? t("readAloud") : paused ? t("resume") : t("pause");
     $("play-icon").setAttribute("d", srcPlaying && !paused ? "M7 5h4v14H7zM13 5h4v14h-4z" : "M8 5v14l11-7z");
     $("play-btn").classList.toggle("is-playing", srcPlaying && !paused);
   }
-  $("play-btn").addEventListener("click", () => {
+  $("play-btn").addEventListener("click", async () => {
+    if (readingDocument) return;
+    if (state.document) {
+      if (playing === "source") {
+        if (mediaPlayer.paused) {
+          try { await mediaPlayer.play(); }
+          catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
+        } else mediaPlayer.pause();
+        return;
+      }
+      stopAll();
+      const generation = playbackGeneration;
+      const doc = state.document;
+      const language = ["en", "fr"].includes(state.language) ? state.language : state.uiLang;
+      readingDocument = true;
+      $("play-btn").disabled = true;
+      showExtractError("");
+      try {
+        if (!doc.audio_url || doc.audio_language !== language) {
+          const res = await API.readDocument(state.sessionId, language);
+          doc.audio_url = res.audio_url;
+          doc.audio_language = language;
+        }
+        if (generation === playbackGeneration) await playAudio(doc.audio_url, "source");
+      } catch (err) {
+        if (generation === playbackGeneration) showExtractError(`${t("errPlayback")} ${err.message}`);
+      } finally {
+        readingDocument = false;
+        if (state.document === doc) $("play-btn").disabled = false;
+      }
+      return;
+    }
     if (playing === "source") {
       Speech.paused ? Speech.resume() : Speech.pause();
       return setTimeout(updatePlayButton, 30);
     }
     speak(state.text, state.language, "source");
   });
-  function stopAll() { Speech.stop(); playing = null; refreshPlaying(); }
+  function stopAll() {
+    playbackGeneration++;
+    mediaPlayer.pause();
+    mediaPlayer.removeAttribute("src");
+    mediaPlayer.load();
+    Speech.stop();
+    playing = null;
+    refreshPlaying();
+  }
+  async function playAudio(url, owner) {
+    stopAll();
+    mediaPlayer.src = apiUrl(url);
+    mediaPlayer.playbackRate = Number($("rate").value);
+    playing = owner;
+    refreshPlaying();
+    try { await mediaPlayer.play(); }
+    catch (err) { playing = null; refreshPlaying(); throw err; }
+  }
   $("stop-btn").addEventListener("click", stopAll);
-  $("rate").addEventListener("input", (e) => ($("rate-out").textContent = Number(e.target.value).toFixed(1) + "×"));
+  $("rate").addEventListener("input", (e) => {
+    $("rate-out").textContent = Number(e.target.value).toFixed(1) + "×";
+    mediaPlayer.playbackRate = Number(e.target.value);
+  });
 
   // Word-by-word highlight while the source text is read aloud
   let wordSpans = [];
@@ -252,6 +370,7 @@
 
   function speak(text, lang, owner) {
     if (!text.trim()) return;
+    stopAll();
     if (owner === "source") showReadingView(text); else hideReadingView();
     Speech.speak(text, lang, {
       rate: Number($("rate").value),
@@ -292,8 +411,13 @@
     b.setAttribute("aria-label", t("listen"));
     b.title = t("listen");
     b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-    b.addEventListener("click", () => {
-      if (playing === li) { Speech.stop(); playing = null; return refreshPlaying(); }
+    b.addEventListener("click", async () => {
+      if (playing === li) return stopAll();
+      if (li.dataset.audioUrl) {
+        try { await playAudio(li.dataset.audioUrl, li); }
+        catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
+        return;
+      }
       speak(li.querySelector(".msg-body").textContent, li.dataset.uiText ? state.uiLang : li.dataset.lang || replyLang(), li);
     });
     li.append(b);
@@ -314,11 +438,16 @@
   async function send() {
     const input = $("chat-input");
     const message = input.value.trim();
-    if (!message || state.busy) return;
+    if (!message || state.busy || state.extracting) return;
+    if (state.document?.status === "ocr_unreviewed_fallback") {
+      showNote("documentFallback");
+      return;
+    }
     input.value = "";
     autoGrow();
     addMessage("user", message);
     state.busy = true;
+    $("new-session").disabled = true;
     $("send-btn").disabled = true;
     const pending = addMessage("assistant", t("thinking"), { speakable: false, pending: true });
     try {
@@ -329,19 +458,34 @@
         language: replyLang(),
         history: state.history,
       });
-      state.history.push({ role: "user", content: message }, { role: "assistant", content: res.reply });
+      const blocked = res.status === "blocked";
+      if (!blocked) state.history.push({ role: "user", content: message }, { role: "assistant", content: res.reply });
       pending.classList.remove("is-pending");
       pending.querySelector(".msg-body").textContent = res.reply;
       pending.dataset.lang = res.language || replyLang();
-      addSpeakButton(pending);
-      if ($("auto-read").checked) speak(res.reply, pending.dataset.lang, pending);
+      if (res.audio_url && !blocked) pending.dataset.audioUrl = res.audio_url;
+      if (res.errors?.length) {
+        const note = document.createElement("p");
+        note.className = "hint";
+        note.textContent = t("answerTextOnly") + " " + res.errors.map((error) => error.message).join(" ");
+        pending.append(note);
+      }
+      if (!blocked && (!state.document || res.audio_url)) addSpeakButton(pending);
+      if (blocked) pending.classList.add("is-notice");
+      if ($("auto-read").checked && !blocked) {
+        if (res.audio_url) {
+          try { await playAudio(res.audio_url, pending); }
+          catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
+        } else if (!state.document) speak(res.reply, pending.dataset.lang, pending);
+      }
     } catch (err) {
       console.error(err);
       pending.classList.remove("is-pending");
       pending.classList.add("is-error");
-      pending.querySelector(".msg-body").textContent = t("errChat");
+      pending.querySelector(".msg-body").textContent = `${t("errChat")} ${err.message || ""}`;
     } finally {
       state.busy = false;
+      $("new-session").disabled = false;
       $("send-btn").disabled = false;
       input.focus();
     }
@@ -472,7 +616,10 @@
     micPreview.pause();
     micPreview.hidden = true;
     micPreview.removeAttribute("src");
-    Object.assign(state, { sessionId: newId(), file: null, text: "", language: "en", history: [] });
+    Object.assign(state, { sessionId: newId(), file: null, text: "", language: "en", history: [], document: null });
+    $("send-btn").disabled = false;
+    $("mic-btn").disabled = false;
+    renderDocumentReview();
     playing = null;
     $("preview").hidden = true;
     $("preview").removeAttribute("src");

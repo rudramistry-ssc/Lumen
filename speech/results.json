@@ -1,0 +1,1257 @@
+{
+  "started_utc": "2026-10-29T16:20:09.057183+00:00",
+  "python": "3.13.1",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "logical_processors": 12,
+  "cold": [
+    {
+      "language": "en",
+      "startup_and_first_synthesis_ms": 4977.13179999846,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 4.0751020408163265,
+        "processing_ms": 4967.31,
+        "voice_load_ms": {
+          "en": 3772.93
+        },
+        "segments": [
+          {
+            "text": "The library is closed on Monday. It reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library is closed on Monday. It reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 4.0751020408163265,
+            "synthesis_ms": 1194.04
+          }
+        ],
+        "voices_loaded": [
+          "en"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 4.0751020408163265,
+        "frames": 89856,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "46932b1845ba69bd5e52574a937d87453d82536809ea9c6849f033e56dd07256",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 265535488,
+        "peak_working_set_bytes": 265535488
+      },
+      "process_wall_ms": 5281.16620000219
+    },
+    {
+      "language": "fr",
+      "startup_and_first_synthesis_ms": 3860.8491999912076,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 3.8312925170068026,
+        "processing_ms": 3850.95,
+        "voice_load_ms": {
+          "fr": 3533.13
+        },
+        "segments": [
+          {
+            "text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 0.0,
+            "end_seconds": 3.8312925170068026,
+            "synthesis_ms": 317.49
+          }
+        ],
+        "voices_loaded": [
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 3.8312925170068026,
+        "frames": 84480,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "681adb90a4a3f72a19d4c4186d8aa8673b0329b55d6e4753ebd4f4b544d193a1",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 200048640,
+        "peak_working_set_bytes": 200048640
+      },
+      "process_wall_ms": 4134.516499994788
+    }
+  ],
+  "rows": [
+    {
+      "id": "english-notice",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 4.133151927437642,
+        "processing_ms": 4967.43,
+        "voice_load_ms": {
+          "en": 3893.22
+        },
+        "segments": [
+          {
+            "text": "The library is closed on Monday. It reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library is closed on Monday. It reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 4.133151927437642,
+            "synthesis_ms": 1073.78
+          }
+        ],
+        "voices_loaded": [
+          "en"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 4.133151927437642,
+        "frames": 91136,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "e0da2fac8c5acd11094a9e94c4ed03b583b4b123665d57f2e6db9d7d0162b22b",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 267063296,
+        "peak_working_set_bytes": 267063296
+      }
+    },
+    {
+      "id": "english-notice",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 3.982222222222222,
+        "processing_ms": 960.37,
+        "voice_load_ms": {
+          "en": 0.0
+        },
+        "segments": [
+          {
+            "text": "The library is closed on Monday. It reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library is closed on Monday. It reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 3.982222222222222,
+            "synthesis_ms": 959.96
+          }
+        ],
+        "voices_loaded": [
+          "en"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 3.982222222222222,
+        "frames": 87808,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "841f869bbf58b31f033a80b8b1c95332470d1945c135e5f22b246bc7ea91e77a",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 270503936,
+        "peak_working_set_bytes": 270503936
+      }
+    },
+    {
+      "id": "french-notice",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 4.0751020408163265,
+        "processing_ms": 3302.94,
+        "voice_load_ms": {
+          "fr": 3132.32
+        },
+        "segments": [
+          {
+            "text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 0.0,
+            "end_seconds": 4.0751020408163265,
+            "synthesis_ms": 170.26
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 4.0751020408163265,
+        "frames": 89856,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "e0f1351e4c424e2a6bfa06c77fe5e57ce490c588af24fc02803d698ac6565a19",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 399704064,
+        "peak_working_set_bytes": 399704064
+      }
+    },
+    {
+      "id": "french-notice",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 3.8545124716553287,
+        "processing_ms": 153.65,
+        "voice_load_ms": {
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque est fermée lundi. Elle rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 0.0,
+            "end_seconds": 3.8545124716553287,
+            "synthesis_ms": 153.33
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 3.8545124716553287,
+        "frames": 84992,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "d7bf2cb850b431e011dc85ec35245ac66544710bb94c15d4d9bca990f824150d",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 411529216,
+        "peak_working_set_bytes": 411529216
+      }
+    },
+    {
+      "id": "bilingual-notice",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 5.532517006802721,
+        "processing_ms": 1572.24,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "The library reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 2.6238548752834467,
+            "synthesis_ms": 1144.92
+          },
+          {
+            "text": "La bibliothèque rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 2.8738321995464853,
+            "end_seconds": 5.532517006802721,
+            "synthesis_ms": 426.83
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 5.532517006802721,
+        "frames": 121992,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "e61b419d538871a6ee740afa8f3b595187815ed4e6f9c334562040d94df81291",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 415236096,
+        "peak_working_set_bytes": 415236096
+      }
+    },
+    {
+      "id": "bilingual-notice",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 5.532517006802721,
+        "processing_ms": 1857.5,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "The library reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 2.6238548752834467,
+            "synthesis_ms": 1153.77
+          },
+          {
+            "text": "La bibliothèque rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 2.8738321995464853,
+            "end_seconds": 5.532517006802721,
+            "synthesis_ms": 703.23
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 5.532517006802721,
+        "frames": 121992,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "e3303b9579c6bc051ffd1bf80b7772d10daee45bf152d3584dc1c39fd3004cf5",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 499802112,
+        "peak_working_set_bytes": 499802112
+      }
+    },
+    {
+      "id": "dates-and-times",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 13.299591836734693,
+        "processing_ms": 3114.33,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Your appointment is on 2026-11-03 at 9:00 AM. Please bring your ID.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Your appointment is on November 3, 2026 at 9 AM. Please bring your ID.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 6.292607709750567,
+            "synthesis_ms": 2171.15
+          },
+          {
+            "text": "Votre rendez-vous est le 2026-11-03 à 14 h 30. Veuillez apporter votre carte d'identité.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Votre rendez-vous est le 3 novembre 2026 à 14 heures 30. Veuillez apporter votre carte d'identité.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 6.542585034013605,
+            "end_seconds": 13.299591836734693,
+            "synthesis_ms": 942.45
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 13.299591836734693,
+        "frames": 293256,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "e3799948ef575da3e77dcbf5f5ba310f2470f36b8535eaa9442e1771bc14e228",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 510038016,
+        "peak_working_set_bytes": 512385024
+      }
+    },
+    {
+      "id": "dates-and-times",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 13.218321995464853,
+        "processing_ms": 2842.78,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Your appointment is on 2026-11-03 at 9:00 AM. Please bring your ID.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Your appointment is on November 3, 2026 at 9 AM. Please bring your ID.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 6.315827664399093,
+            "synthesis_ms": 1952.75
+          },
+          {
+            "text": "Votre rendez-vous est le 2026-11-03 à 14 h 30. Veuillez apporter votre carte d'identité.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Votre rendez-vous est le 3 novembre 2026 à 14 heures 30. Veuillez apporter votre carte d'identité.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 6.565804988662132,
+            "end_seconds": 13.218321995464853,
+            "synthesis_ms": 889.43
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 13.218321995464853,
+        "frames": 291464,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "6a8a147c2e0545515334b2294eae66948add55bdaf352e72c6a0b01e2ad55c7e",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 596250624,
+        "peak_working_set_bytes": 598581248
+      }
+    },
+    {
+      "id": "prices-and-decimals",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 14.50702947845805,
+        "processing_ms": 3221.77,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Admission is $12.50. The discount is 10%. The package weighs 1.5 kg.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Admission is 12.50 dollars. The discount is 10 percent. The package weighs 1.5 kilograms.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 7.151746031746032,
+            "synthesis_ms": 2357.39
+          },
+          {
+            "text": "L'entrée coûte 12,50 $. La réduction est de 10 %. Le paquet pèse 1,5 kg.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "L'entrée coûte 12,50 dollars. La réduction est de 10 pour cent. Le paquet pèse 1,5 kilogrammes.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 7.401723356009071,
+            "end_seconds": 14.50702947845805,
+            "synthesis_ms": 862.39
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 14.50702947845805,
+        "frames": 319880,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "bd2ca44587d0dd591926be0d6ab6b1d27805f5f268abd691f106ea1a94aec89f",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 599289856,
+        "peak_working_set_bytes": 601853952
+      }
+    },
+    {
+      "id": "prices-and-decimals",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 14.65795918367347,
+        "processing_ms": 3077.19,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Admission is $12.50. The discount is 10%. The package weighs 1.5 kg.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Admission is 12.50 dollars. The discount is 10 percent. The package weighs 1.5 kilograms.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 7.209795918367347,
+            "synthesis_ms": 2243.07
+          },
+          {
+            "text": "L'entrée coûte 12,50 $. La réduction est de 10 %. Le paquet pèse 1,5 kg.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "L'entrée coûte 12,50 dollars. La réduction est de 10 pour cent. Le paquet pèse 1,5 kilogrammes.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 7.459773242630385,
+            "end_seconds": 14.65795918367347,
+            "synthesis_ms": 833.34
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 14.65795918367347,
+        "frames": 323208,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "29d6422c392d62fab27580ed9e4021332e4b868e88b5a98bc0b306f6dda65e7f",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 602251264,
+        "peak_working_set_bytes": 604839936
+      }
+    },
+    {
+      "id": "nutrition-label",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 21.972244897959182,
+        "processing_ms": 4419.05,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Nutrition Facts. Per 125 g. Calories 120. Fat 1.5 g, 2%. Sodium 230 mg, 10%.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Nutrition Facts. Per 125 grams. Calories 120. Fat 1.5 grams, 2 percent. Sodium 230 milligrams, 10 percent.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 11.795736961451247,
+            "synthesis_ms": 3482.94
+          },
+          {
+            "text": "Valeur nutritive. Pour 125 g. Calories 120. Lipides 1,5 g, 2 %. Sodium 230 mg, 10 %.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Valeur nutritive. Pour 125 grammes. Calories 120. Lipides 1,5 grammes, 2 pour cent. Sodium 230 milligrammes, 10 pour cent.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 12.045714285714286,
+            "end_seconds": 21.972244897959182,
+            "synthesis_ms": 934.4
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 21.972244897959182,
+        "frames": 484488,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "f6fb45ba48b0b490637ff841280f14991349f4b4b879f5a19e77c0841a65b64b",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 604721152,
+        "peak_working_set_bytes": 608604160
+      }
+    },
+    {
+      "id": "nutrition-label",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 22.5643537414966,
+        "processing_ms": 4911.3,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Nutrition Facts. Per 125 g. Calories 120. Fat 1.5 g, 2%. Sodium 230 mg, 10%.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Nutrition Facts. Per 125 grams. Calories 120. Fat 1.5 grams, 2 percent. Sodium 230 milligrams, 10 percent.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 12.202086167800454,
+            "synthesis_ms": 3793.85
+          },
+          {
+            "text": "Valeur nutritive. Pour 125 g. Calories 120. Lipides 1,5 g, 2 %. Sodium 230 mg, 10 %.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Valeur nutritive. Pour 125 grammes. Calories 120. Lipides 1,5 grammes, 2 pour cent. Sodium 230 milligrammes, 10 pour cent.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 12.452063492063493,
+            "end_seconds": 22.5643537414966,
+            "synthesis_ms": 1116.46
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 22.5643537414966,
+        "frames": 497544,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "4cd40c426f28cdbb20e7626d9df4580518a59807e69cc78ceb5ef2a4e20fd72d",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 625020928,
+        "peak_working_set_bytes": 628998144
+      }
+    },
+    {
+      "id": "numeric-disagreement",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 11.912562358276643,
+        "processing_ms": 3894.25,
+        "voice_load_ms": {
+          "en": 0.0
+        },
+        "segments": [
+          {
+            "text": "Warning: the printed decimal separator is uncertain. Check the original label before relying on this reading.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: the printed decimal separator is uncertain. Check the original label before relying on this reading.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 6.791836734693877,
+            "synthesis_ms": 2551.06
+          },
+          {
+            "text": "This is an uncertain OCR reading.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "This is an uncertain OCR reading.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 7.041814058956916,
+            "end_seconds": 9.282539682539683,
+            "synthesis_ms": 674.12
+          },
+          {
+            "text": "Fat 1.5 g per serving.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Fat 1.5 grams per serving.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 9.53251700680272,
+            "end_seconds": 11.912562358276643,
+            "synthesis_ms": 668.49
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 11.912562358276643,
+        "frames": 262672,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "c2d216abe1bc924840ce5b210d6014e2c761b6429eac5384a3c2f7e4eabb7bda",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 625025024,
+        "peak_working_set_bytes": 628998144
+      }
+    },
+    {
+      "id": "numeric-disagreement",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 11.866122448979592,
+        "processing_ms": 3381.45,
+        "voice_load_ms": {
+          "en": 0.0
+        },
+        "segments": [
+          {
+            "text": "Warning: the printed decimal separator is uncertain. Check the original label before relying on this reading.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: the printed decimal separator is uncertain. Check the original label before relying on this reading.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 6.757006802721088,
+            "synthesis_ms": 2069.82
+          },
+          {
+            "text": "This is an uncertain OCR reading.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "This is an uncertain OCR reading.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 7.006984126984127,
+            "end_seconds": 9.294149659863946,
+            "synthesis_ms": 648.93
+          },
+          {
+            "text": "Fat 1.5 g per serving.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Fat 1.5 grams per serving.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 9.544126984126985,
+            "end_seconds": 11.866122448979592,
+            "synthesis_ms": 662.11
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 11.866122448979592,
+        "frames": 261648,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "fc4cfc71552ec659b328d02277a3cad4cf67d2f95a6856ab707957d21f5f48fb",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 625131520,
+        "peak_working_set_bytes": 628998144
+      }
+    },
+    {
+      "id": "reconciled-review",
+      "repeat": 0,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 16.81814058956916,
+        "processing_ms": 3958.42,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 5.410249433106576,
+            "synthesis_ms": 1552.38
+          },
+          {
+            "text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "language": "fr",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 5.660226757369615,
+            "end_seconds": 11.674195011337869,
+            "synthesis_ms": 822.68
+          },
+          {
+            "text": "Admission $12.50.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Admission 12.50 dollars.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 11.924172335600908,
+            "end_seconds": 14.397097505668935,
+            "synthesis_ms": 1126.26
+          },
+          {
+            "text": "Entrée 12,50 $.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Entrée 12,50 dollars.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 14.647074829931972,
+            "end_seconds": 16.81814058956916,
+            "synthesis_ms": 455.54
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 16.81814058956916,
+        "frames": 370840,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "db172d1b0f18981f2392d86015da319d0d46c51755ee52153802d6c811b2b048",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 633393152,
+        "peak_working_set_bytes": 636366848
+      }
+    },
+    {
+      "id": "reconciled-review",
+      "repeat": 1,
+      "synthesis": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 16.713650793650793,
+        "processing_ms": 4664.29,
+        "voice_load_ms": {
+          "en": 0.0,
+          "fr": 0.0
+        },
+        "segments": [
+          {
+            "text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 5.23609977324263,
+            "synthesis_ms": 2154.78
+          },
+          {
+            "text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "language": "fr",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 5.486077097505669,
+            "end_seconds": 11.395555555555555,
+            "synthesis_ms": 747.0
+          },
+          {
+            "text": "Admission $12.50.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "Admission 12.50 dollars.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 11.645532879818594,
+            "end_seconds": 14.106848072562359,
+            "synthesis_ms": 1204.52
+          },
+          {
+            "text": "Entrée 12,50 $.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "Entrée 12,50 dollars.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 14.356825396825396,
+            "end_seconds": 16.713650793650793,
+            "synthesis_ms": 557.28
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "audio": {
+        "duration_seconds": 16.713650793650793,
+        "frames": 368536,
+        "sample_rate": 22050,
+        "peak_pcm": 32767,
+        "sha256": "f30c97ffd4a36bb1b1836b53a76928bc94cf5ff558ec7ee38bacacea0c1510ea",
+        "pronunciation_review": "pending manual listening"
+      },
+      "memory": {
+        "working_set_bytes": 633335808,
+        "peak_working_set_bytes": 636366848
+      }
+    }
+  ],
+  "dependencies": {
+    "piper-tts": "1.8.0",
+    "onnxruntime": "1.31.1",
+    "numpy": "2.5.4",
+    "pathvalidate": "3.3.1"
+  },
+  "method": "Cold = new Python process, OS file cache uncontrolled. Main engine reused across two syntheses per fixture. Voice hashing/import/load included in first call. CPU only; Python socket connections blocked and ONNX telemetry disabled. No listening score assigned.",
+  "voices": {
+    "en": {
+      "name": "en_US-ljspeech-high",
+      "locale": "en-US",
+      "sample_rate": 22050,
+      "repository": "rhasspy/piper-voices",
+      "revision": "5041a7a49ae5b3a0f30e6837769eb03fdbb231bd",
+      "license_note": "Repository metadata: MIT; model card: LJ Speech dataset public domain.",
+      "model_card_url": "https://huggingface.co/rhasspy/piper-voices/blob/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/en/en_US/ljspeech/high/MODEL_CARD",
+      "files": [
+        {
+          "filename": "en_US-ljspeech-high.onnx",
+          "path": "en/en_US/ljspeech/high/en_US-ljspeech-high.onnx",
+          "bytes": 114199011,
+          "sha256": "5d4f08ba6a2a48c44592eed3ce56bf85e9de3dd4e20df90541ae68a8310c029a"
+        },
+        {
+          "filename": "en_US-ljspeech-high.onnx.json",
+          "path": "en/en_US/ljspeech/high/en_US-ljspeech-high.onnx.json",
+          "bytes": 4970,
+          "sha256": "7e1f4634af596d83cca997fb7a931ba80b70f8a316a2655ee69c55365e0ace14"
+        },
+        {
+          "filename": "MODEL_CARD",
+          "path": "en/en_US/ljspeech/high/MODEL_CARD",
+          "bytes": 513,
+          "sha256": "289f7421072d689a3d91f6c632f486af46f9b8b04417536104a4ea667b8a394b"
+        }
+      ]
+    },
+    "fr": {
+      "name": "fr_FR-siwis-medium",
+      "locale": "fr-FR",
+      "sample_rate": 22050,
+      "repository": "rhasspy/piper-voices",
+      "revision": "5041a7a49ae5b3a0f30e6837769eb03fdbb231bd",
+      "license_note": "Repository metadata: MIT; model card: SIWIS dataset CC-BY 4.0, fine-tuned from Lessac medium.",
+      "model_card_url": "https://huggingface.co/rhasspy/piper-voices/blob/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/fr/fr_FR/siwis/medium/MODEL_CARD",
+      "files": [
+        {
+          "filename": "fr_FR-siwis-medium.onnx",
+          "path": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+          "bytes": 63201294,
+          "sha256": "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99"
+        },
+        {
+          "filename": "fr_FR-siwis-medium.onnx.json",
+          "path": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+          "bytes": 4875,
+          "sha256": "39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959"
+        },
+        {
+          "filename": "MODEL_CARD",
+          "path": "fr/fr_FR/siwis/medium/MODEL_CARD",
+          "bytes": 284,
+          "sha256": "bd8b8d079d4d3d2c4cc20345889bbcd586d72f021a132f93357a763eb5232cce"
+        }
+      ]
+    }
+  },
+  "error_cases": [
+    {
+      "language": null,
+      "error": "Language None needs identifiable subsegments or an explicit caller-selected default_language",
+      "expected": true
+    },
+    {
+      "language": "unknown",
+      "error": "Language 'unknown' needs identifiable subsegments or an explicit caller-selected default_language",
+      "expected": true
+    },
+    {
+      "language": "mixed",
+      "error": "Language 'mixed' needs identifiable subsegments or an explicit caller-selected default_language",
+      "expected": true
+    },
+    {
+      "language": "de",
+      "error": "Unsupported language 'de'; supported languages: en, fr",
+      "expected": true
+    }
+  ],
+  "final_memory": {
+    "working_set_bytes": 633339904,
+    "peak_working_set_bytes": 636366848
+  },
+  "completed_utc": "2026-10-29T16:21:09.017360+00:00",
+  "source_hashes": {
+    "src\\signspeak_speech\\__init__.py": "40993150f30f28e12df7ccebcd92866481a826baa5dff128c6428ccff6044be9",
+    "src\\signspeak_speech\\__main__.py": "3806e0ff07a6f00d39e3dd801050bbe3a6f9e3bccbf83b55bea72b143c45fd34",
+    "src\\signspeak_speech\\engine.py": "e15891aea77b8a2fd187cceb8b00d0337fbd162cd9a25224585b7ace44237174",
+    "src\\signspeak_speech\\text.py": "e7322ec47721f3f9f194324ab747c94ba961048379f7003bef98cd43626f3b89",
+    "src\\signspeak_speech\\voices.json": "050e542a05945c1684bad46249220c43988033a9607454e22eaf46eb7c03fabd",
+    "src\\signspeak_speech\\voices.py": "88f01086cbc7f9196d31ed75582d2336d63c466efb37ae0869fbb31099f6388d"
+  },
+  "samples_directory": "runtime/evaluation-1793290809055725300",
+  "summary": {
+    "warm_median_ms": 2959.985,
+    "warm_median_real_time_factor": 0.2294109024891876,
+    "manual_listening": "pending; no naturalness or pronunciation score assigned",
+    "all_warm_voice_load_ms_zero": true
+  },
+  "integration_checks": [
+    {
+      "sample": "actual-ocr-view.wav",
+      "metadata": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 18.25233560090703,
+        "processing_ms": 10397.37,
+        "voice_load_ms": {
+          "en": 3653.27,
+          "fr": 3005.15
+        },
+        "segments": [
+          {
+            "text": "Warning: this OCR reading is incomplete or uncertain.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: this OCR reading is incomplete or uncertain.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 3.93578231292517,
+            "synthesis_ms": 1022.77
+          },
+          {
+            "text": "Warning: some numbers or values in this OCR reading are uncertain.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: some numbers or values in this OCR reading are uncertain.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 4.185759637188209,
+            "end_seconds": 8.446621315192743,
+            "synthesis_ms": 1026.12
+          },
+          {
+            "text": "The library reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 8.696598639455782,
+            "end_seconds": 11.332063492063492,
+            "synthesis_ms": 717.15
+          },
+          {
+            "text": "Attention : certains nombres ou valeurs sont incertains dans cette lecture OCR.",
+            "language": "fr",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Attention : certains nombres ou valeurs sont incertains dans cette lecture OCR.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 11.582040816326531,
+            "end_seconds": 15.343673469387754,
+            "synthesis_ms": 832.32
+          },
+          {
+            "text": "La bibliothèque rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 15.593650793650793,
+            "end_seconds": 18.25233560090703,
+            "synthesis_ms": 139.86
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "source_unchanged": true
+    },
+    {
+      "sample": "actual-reconciliation.wav",
+      "metadata": {
+        "engine": "OHF-Voice/piper1-gpl",
+        "sample_rate": 22050,
+        "channels": 1,
+        "sample_width": 2,
+        "audio_duration_seconds": 17.596009070294784,
+        "processing_ms": 11077.33,
+        "voice_load_ms": {
+          "en": 3742.29,
+          "fr": 3281.47
+        },
+        "segments": [
+          {
+            "text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "language": "en",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Warning: some numbers or values in this reading are uncertain. Check the original document.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 0.0,
+            "end_seconds": 5.363809523809524,
+            "synthesis_ms": 1363.35
+          },
+          {
+            "text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "language": "fr",
+            "kind": "uncertainty_notice",
+            "spoken_text": "Attention : certains nombres ou valeurs de cette lecture sont incertains. Vérifiez le document original.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 5.613786848072563,
+            "end_seconds": 11.918004535147393,
+            "synthesis_ms": 959.44
+          },
+          {
+            "text": "The library reopens Tuesday at 9:00 AM.",
+            "language": "en",
+            "kind": "content",
+            "spoken_text": "The library reopens Tuesday at 9 AM.",
+            "voice": "en_US-ljspeech-high",
+            "start_seconds": 12.16798185941043,
+            "end_seconds": 14.83827664399093,
+            "synthesis_ms": 1189.17
+          },
+          {
+            "text": "La bibliothèque rouvre mardi à 9 h 00.",
+            "language": "fr",
+            "kind": "content",
+            "spoken_text": "La bibliothèque rouvre mardi à 9 heures.",
+            "voice": "fr_FR-siwis-medium",
+            "start_seconds": 15.088253968253968,
+            "end_seconds": 17.596009070294784,
+            "synthesis_ms": 540.99
+          }
+        ],
+        "voices_loaded": [
+          "en",
+          "fr"
+        ],
+        "translation": "not_performed",
+        "pronunciation_review": "manual listening required"
+      },
+      "source_unchanged": true
+    }
+  ]
+}

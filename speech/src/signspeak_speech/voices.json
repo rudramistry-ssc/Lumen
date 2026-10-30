@@ -1,0 +1,60 @@
+{
+  "en": {
+    "name": "en_US-ljspeech-high",
+    "locale": "en-US",
+    "sample_rate": 22050,
+    "repository": "rhasspy/piper-voices",
+    "revision": "5041a7a49ae5b3a0f30e6837769eb03fdbb231bd",
+    "license_note": "Repository metadata: MIT; model card: LJ Speech dataset public domain.",
+    "model_card_url": "https://huggingface.co/rhasspy/piper-voices/blob/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/en/en_US/ljspeech/high/MODEL_CARD",
+    "files": [
+      {
+        "filename": "en_US-ljspeech-high.onnx",
+        "path": "en/en_US/ljspeech/high/en_US-ljspeech-high.onnx",
+        "bytes": 114199011,
+        "sha256": "5d4f08ba6a2a48c44592eed3ce56bf85e9de3dd4e20df90541ae68a8310c029a"
+      },
+      {
+        "filename": "en_US-ljspeech-high.onnx.json",
+        "path": "en/en_US/ljspeech/high/en_US-ljspeech-high.onnx.json",
+        "bytes": 4970,
+        "sha256": "7e1f4634af596d83cca997fb7a931ba80b70f8a316a2655ee69c55365e0ace14"
+      },
+      {
+        "filename": "MODEL_CARD",
+        "path": "en/en_US/ljspeech/high/MODEL_CARD",
+        "bytes": 513,
+        "sha256": "289f7421072d689a3d91f6c632f486af46f9b8b04417536104a4ea667b8a394b"
+      }
+    ]
+  },
+  "fr": {
+    "name": "fr_FR-siwis-medium",
+    "locale": "fr-FR",
+    "sample_rate": 22050,
+    "repository": "rhasspy/piper-voices",
+    "revision": "5041a7a49ae5b3a0f30e6837769eb03fdbb231bd",
+    "license_note": "Repository metadata: MIT; model card: SIWIS dataset CC-BY 4.0, fine-tuned from Lessac medium.",
+    "model_card_url": "https://huggingface.co/rhasspy/piper-voices/blob/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/fr/fr_FR/siwis/medium/MODEL_CARD",
+    "files": [
+      {
+        "filename": "fr_FR-siwis-medium.onnx",
+        "path": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+        "bytes": 63201294,
+        "sha256": "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99"
+      },
+      {
+        "filename": "fr_FR-siwis-medium.onnx.json",
+        "path": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+        "bytes": 4875,
+        "sha256": "39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959"
+      },
+      {
+        "filename": "MODEL_CARD",
+        "path": "fr/fr_FR/siwis/medium/MODEL_CARD",
+        "bytes": 284,
+        "sha256": "bd8b8d079d4d3d2c4cc20345889bbcd586d72f021a132f93357a763eb5232cce"
+      }
+    ]
+  }
+}
