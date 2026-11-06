@@ -99,8 +99,6 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ```
 
-Do not commit these Dockerfile changes.
-
 **Step 4.** Build the image again without cache, then start the app:
 
 ```bash
@@ -108,8 +106,7 @@ docker compose build --no-cache models
 docker compose up
 ```
 
-The `models` container now downloads the model files. If the error stays, make
-sure `certs/GOC-GDC-ROOT-A.crt` exists and that you used `--no-cache`.
+The `models` container now downloads the model files.
 
 ## Try it live
 
