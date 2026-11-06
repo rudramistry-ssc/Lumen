@@ -46,6 +46,42 @@ images and models. These are starting recommendations, not measured minimums.
 The native build defaults to two compiler jobs; inference defaults to four CPU
 threads (`AI_THREADS`). GPU setup is not required.
 
+## Running behind a network with a custom root CA
+
+Some networks (corporate, school or institutional) inspect HTTPS traffic with a
+proxy that re-signs it using its own **root CA**. Windows trusts that CA already,
+but WSL and Docker containers do not, so builds and the `models` download fail:
+
+```text
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify
+failed: self-signed certificate in certificate chain
+```
+
+This does not happen on networks without such a proxy (for example a home
+network), so skip this section if you do not see the error.
+
+1. Export your network's root CA in PEM/Base64 format with a `.crt` extension
+   (ask your IT team, or export it from the Windows certificate store).
+2. In WSL, copy it into the repo's `certs/` folder. Its contents are git-ignored,
+   so the certificate is never committed:
+
+   ```bash
+   cp /mnt/c/Users/<WindowsUsername>/<root-ca>.crt certs/
+   ```
+
+3. In `backend/Dockerfile.offline`, uncomment the `COPY certs/...` and
+   `RUN update-ca-certificates` lines in **both** stages, and the `ENV
+   SSL_CERT_FILE=...` lines in the final stage. Do not commit those edits.
+4. Rebuild without cache so the certificate is included, then start the app:
+
+   ```bash
+   docker compose build --no-cache models
+   docker compose up
+   ```
+
+If `docker compose build` reports that `certs/*.crt` matches nothing, the file
+from step 2 is missing.
+
 ## Try it live
 
 1. Open the app and upload one simple, well-lit English/French image or sample.

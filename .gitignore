@@ -1,0 +1,3 @@
+# Local custom root CA certificates (never commit)
+certs/*
+!certs/README.txt

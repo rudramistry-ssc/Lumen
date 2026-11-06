@@ -4,6 +4,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Optional: trust a custom root CA (only needed on networks that inspect HTTPS
+# traffic, e.g. corporate proxies). Place the .crt in certs/ and uncomment both
+# lines below. See "Running behind a network with a custom root CA" in README.md.
+# COPY certs/*.crt /usr/local/share/ca-certificates/
+# RUN update-ca-certificates
+
 # Match the AI teammate's tested revisions; verify source archives before building.
 RUN curl --fail --location --retry 3 \
     https://codeload.github.com/ggml-org/llama.cpp/tar.gz/5cd62ffee991190be32fb64e2b5357b4fc07eeba \
@@ -34,6 +40,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libgomp1 libstdc++6 ffmpeg \
     tesseract-ocr tesseract-ocr-eng tesseract-ocr-fra \
     && rm -rf /var/lib/apt/lists/*
+
+# Optional: trust a custom root CA (only needed on networks that inspect HTTPS
+# traffic, e.g. corporate proxies). Place the .crt in certs/ and uncomment both
+# lines below. See "Running behind a network with a custom root CA" in README.md.
+# COPY certs/*.crt /usr/local/share/ca-certificates/
+# RUN update-ca-certificates
+
+# Optional: make Python downloads use the system trust store (needs the CA above).
+# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+#     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 COPY --from=native /llama/build/bin/llama-server /usr/local/bin/llama-server
 COPY --from=native /whisper/build/bin/whisper-cli /usr/local/bin/whisper-cli
