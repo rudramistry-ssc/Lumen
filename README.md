@@ -58,7 +58,7 @@ models-1 exited with code 1
 ```
 
 **Cause:** The network changes HTTPS traffic with its own root certificate
-(`GOC-GDC-ROOT-A`). Windows trusts this certificate. The Docker image does not.
+(`GOC-GDC-ROOT-A`).
 To fix this, put the certificate in the image.
 
 **Step 1.** Export the certificate. Open **Windows PowerShell** and run:
@@ -80,20 +80,19 @@ mkdir -p certs
 cp /mnt/c/Users/<WindowsUsername>/GOC-GDC-ROOT-A.crt certs/
 ```
 
-Replace `<WindowsUsername>` with your Windows user name. Git ignores
-`certs/*.crt`. Do not commit the certificate.
+Replace `<WindowsUsername>` with your Windows user name.
 
-**Step 3.** Edit `backend/Dockerfile.offline`. Add these lines in **both**
-stages, directly after the `RUN apt-get ...` block (before the next `RUN` or
-`COPY --from` line):
+**Step 3.** Edit `backend/Dockerfile.offline`. Find the three comment lines
+that start with `# [ROOT CA`. Add the lines below directly under each one.
+
+Under `# [ROOT CA 1/3]` and `# [ROOT CA 3/3]`, add:
 
 ```dockerfile
 COPY certs/*.crt /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 ```
 
-In the **last** stage, add these lines directly after the existing `ENV` block
-at the top of that stage:
+Under `# [ROOT CA 2/3]`, add:
 
 ```dockerfile
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
