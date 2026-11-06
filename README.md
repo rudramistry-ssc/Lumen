@@ -46,6 +46,72 @@ images and models. These are starting recommendations, not measured minimums.
 The native build defaults to two compiler jobs; inference defaults to four CPU
 threads (`AI_THREADS`). GPU setup is not required.
 
+## Troubleshooting
+
+### Error: `CERTIFICATE_VERIFY_FAILED` when the `models` container starts
+
+```text
+models-1  | ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED]
+certificate verify failed: self-signed certificate in certificate chain
+models-1  | urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] ...>
+models-1 exited with code 1
+```
+
+**Cause:** The network changes HTTPS traffic with its own root certificate
+(`GOC-GDC-ROOT-A`). Windows trusts this certificate. The Docker image does not.
+To fix this, put the certificate in the image.
+
+**Step 1.** Export the certificate. Open **Windows PowerShell** and run:
+
+```PowerShell
+$cert = Get-ChildItem Cert:\LocalMachine\Root |
+  Where-Object { $_.Subject -like "*GOC-GDC-ROOT-A*" }
+
+Export-Certificate -Cert $cert -FilePath "$env:USERPROFILE\GOC-GDC-ROOT-A.cer"
+
+certutil -encode "$env:USERPROFILE\GOC-GDC-ROOT-A.cer" "$env:USERPROFILE\GOC-GDC-ROOT-A.crt"
+```
+
+**Step 2.** Copy the certificate into the `certs` folder in the repository
+root. Open the **WSL** terminal in the repository root and run:
+
+```bash
+mkdir -p certs
+cp /mnt/c/Users/<WindowsUsername>/GOC-GDC-ROOT-A.crt certs/
+```
+
+Replace `<WindowsUsername>` with your Windows user name. Git ignores
+`certs/*.crt`. Do not commit the certificate.
+
+**Step 3.** Edit `backend/Dockerfile.offline`. Add these lines in **both**
+stages, directly after the `RUN apt-get ...` block (before the next `RUN` or
+`COPY --from` line):
+
+```dockerfile
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+```
+
+In the **last** stage, add these lines directly after the existing `ENV` block
+at the top of that stage:
+
+```dockerfile
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+```
+
+Do not commit these Dockerfile changes.
+
+**Step 4.** Build the image again without cache, then start the app:
+
+```bash
+docker compose build --no-cache models
+docker compose up
+```
+
+The `models` container now downloads the model files. If the error stays, make
+sure `certs/GOC-GDC-ROOT-A.crt` exists and that you used `--no-cache`.
+
 ## Try it live
 
 1. Open the app and upload one simple, well-lit English/French image or sample.
