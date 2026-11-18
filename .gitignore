@@ -1,2 +1,14 @@
 # Local root CA certificates (never commit)
 certs/*.crt
+
+# Local settings written by start.sh / start.ps1 (accelerator choice, ports)
+.env
+
+# Native (non-Docker) runs
+.venv/
+models/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+ocr/out.txt

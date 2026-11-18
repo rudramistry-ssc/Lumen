@@ -1,171 +1,171 @@
-# Lumen - CanAI Team E
+# Lumen – offline demo (local GPU/CPU, Docker)
 
-Offline hackathon PoC: upload a sign or notice, display its Qwen3-VL
-transcription, hear it with Piper, and ask questions by typing or microphone.
-English and French are supported. Vision output and answers remain unverified;
-review important information against the original image.
+The finalized Lumen app – same frontend, same image-reading pipeline, same
+confidence estimates and the same local Kokoro/Whisper speech – but the Qwen3-VL
+vision model runs **on this computer** in Docker instead of on the HPC cluster.
+It uses a GPU when one is usable (Intel Iris Xe / Arc, NVIDIA, AMD) and
+otherwise falls back to the CPU. After the first setup it works with no network.
 
-## Start the full app
+One photo → one Qwen3-VL request → extracted text, summary, detected language
+and text/summary confidence estimates. Follow-up chat re-sends the same image and
+the full conversation. Read aloud (Kokoro) and the microphone (faster-whisper)
+run locally in the app container. Vision output and answers are unverified;
+check important information against the original image.
 
-Install Docker with Docker Compose. From the repository root:
+## Start it
 
-```bash
-docker compose up --build
+### Windows (Docker Engine inside WSL2)
+
+One-time: install Docker Engine in your WSL Ubuntu (Docker Desktop is not needed):
+
+```powershell
+wsl -d Ubuntu-24.04 -u root -- bash -c "curl -fsSL https://get.docker.com | sh && usermod -aG docker `$(id -nu 1000)"
 ```
 
-Open **http://localhost:8000** once `api` is healthy. API docs are at `/docs`.
-If port 8000 is occupied:
+On networks that inspect HTTPS (e.g. `GOC-GDC-ROOT-A`), that download fails until
+WSL trusts the root certificate; see [Corporate networks](#corporate-networks).
 
-```bash
-APP_PORT=8001 docker compose up --build
+Then, from this folder:
+
+```powershell
+.\start.ps1
 ```
 
-The port override example is for Bash/WSL. In PowerShell, set
-`$env:APP_PORT = "8001"` before running Compose.
+### Linux
 
-**First setup needs internet:** the image builds Linux CPU runtimes and installs
-dependencies, then the `models` setup container downloads about 1.9 GB of pinned
-Qwen model/projector, Piper voices and Whisper model files. SHA256 and size are
-verified. Build/download time depends on CPU/network; leave setup running.
-Downloads are explicit setup work, never part of image or chat handlers.
+Install Docker Engine with the Compose plugin, then `./start.sh`.
 
-Subsequent launches reuse the built image and model volume, including offline:
+Open **http://localhost:8000** when the script prints *Lumen is ready*, and
+click **Open app**. The first run downloads about 2 GB of pinned models (plus
+the runtime image for your GPU) and builds the app image; that takes a while on
+a slow network. Later starts take seconds to a minute.
+
+| Command | What it does |
+|---|---|
+| `.\start.ps1` / `./start.sh` | detect GPU, download/verify models, start |
+| `... --offline` | restart with existing images/models, no network at all |
+| `... --cpu` | skip GPU detection |
+| `docker compose logs -f qwen` | watch the vision model (GPU offload, timings) |
+| `docker compose down` | stop (models stay in the `models` volume) |
+
+Do **not** run `docker compose down -v` unless you want to delete the models.
+
+## How the GPU is chosen
+
+`start.sh` lists the GPUs that could work on this machine, then asks llama.cpp
+itself, inside the exact Docker service that will run the model, which devices it
+can use (`llama-server --list-devices`). The first GPU that llama.cpp actually
+reports is used; if none works, the CPU is used. The choice is saved in `.env`
+(`COMPOSE_FILE`), so plain `docker compose` commands keep using it.
+
+| Machine | Compose files | llama.cpp v1.0.0 image |
+|---|---|---|
+| Windows + Intel GPU (WSL2) | `compose.yaml` + `compose.gpu-intel-wsl.yaml` | `server-intel` (SYCL) |
+| Linux + Intel GPU | `compose.yaml` + `compose.gpu-intel.yaml` | `server-intel` (SYCL) |
+| NVIDIA (Linux or WSL2) | `compose.yaml` + `compose.gpu-nvidia.yaml` | `server-cuda` |
+| AMD / other on Linux | `compose.yaml` + `compose.gpu-vulkan.yaml` | `server-vulkan` |
+| No usable GPU | `compose.yaml` | `server` (CPU) |
+
+Every image is pinned by digest. NVIDIA additionally needs the NVIDIA Container
+Toolkit on the host. Force a choice with `LUMEN_ACCELERATOR=cpu|intel-wsl|intel|nvidia|vulkan`.
+
+## Settings
+
+Set these in the shell before `start.ps1`/`start.sh` (they are remembered in `.env`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `LUMEN_MODEL_SIZE` | `2B` | `8B` = Qwen3-VL-8B (closer to the HPC results; ~5.8 GB, slower, needs ~11 GB of memory) |
+| `LUMEN_ACCELERATOR` | `auto` | see above |
+| `LUMEN_CONTEXT` | `16384` | model context (tokens) for the image, history and answer |
+| `LUMEN_TIMEOUT_SECONDS` | `900` | longest wait for one model answer |
+| `LUMEN_GPU_LAYERS` | all | lower it if the GPU runs out of memory |
+| `APP_PORT` | `8000` | browser port (always bound to localhost only) |
+
+WSL2 gives Docker half of the computer's memory by default. For the 8B model on a
+16 GB laptop, raise it in `%UserProfile%\.wslconfig` (`[wsl2]` / `memory=12GB`),
+run `wsl --shutdown`, then start again.
+
+## What is the same as the HPC version, and what differs
+
+Unchanged: the frontend (only the landing-page lines that named vLLM/the HPC GPU
+node now say llama.cpp/local GPU), the image prompt and strict JSON contract,
+the confidence estimates, chat history handling, session limits, the Kokoro voice
+(70/30 `af_heart`/`af_bella` blend, `ff_siwis` for French, Misaki pronunciation,
+OpenVINO FP32 acceleration, clip caching) and faster-whisper speech input.
+
+Different: the model is a 4-bit GGUF of Qwen3-VL (2B by default, 8B optional)
+served by llama.cpp, instead of the full-precision 8B on vLLM. The 2B model is
+much faster but reads small or messy text less reliably and its confidence
+estimates are less meaningful. Local inference is slower than the HPC GPU,
+especially on a CPU.
+
+## Performance on the development laptop
+
+Measured on an Intel Core i7-1265U (Iris Xe, 16 GB RAM) with Qwen3-VL-2B, CPU only:
+
+| Step | Time |
+|---|---|
+| Large photo (~2,200 image tokens), complete extraction | ~4 min |
+| Small sample sign | 20 s – 1.5 min |
+| Follow-up chat answer (image reused from cache) | 15 s – 1.5 min |
+| Model start | ~1 min |
+
+Image reading dominates; answers are generated at ~6–7 tokens/s. A discrete
+NVIDIA/AMD GPU is much faster. The Iris Xe through WSL2 was only ~20% faster than
+the CPU in testing, took 1.5–4 min to start, and its driver occasionally crashed;
+the `qwen` container then restarts the model and, after a second crash, keeps
+serving on the CPU, while the app repeats the interrupted request. GPU tuning is
+still in progress.
+
+Known limits of the 2B model: weaker reading of small or messy text, a
+bilingual sign was once reported as English only, and its confidence estimates
+(e.g. 100/100) are not meaningful. The app retries once when the model's answer
+breaks the strict JSON contract. Use `LUMEN_MODEL_SIZE=8B` on machines with more
+memory for results closer to the HPC version.
+
+## Corporate networks
+
+Networks that inspect HTTPS (for example `GOC-GDC-ROOT-A`) make downloads fail
+with `CERTIFICATE_VERIFY_FAILED` / `self-signed certificate in certificate chain`.
+Put the PEM root certificate in `certs/` as a `.crt` file; the Docker build trusts
+it automatically (verification stays on). `start.ps1` exports `GOC-GDC-ROOT-A`
+from the Windows certificate store into `certs/` for you. For the one-time Docker
+Engine install, WSL itself must trust it too:
 
 ```bash
-docker compose up --pull never --no-build
+sudo cp certs/*.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
 ```
 
-The setup container checks existing files without network calls. Missing files
-still need internet to provision; damaged files cause an explicit error instead
-of being silently accepted. Build caches are not an offline installation bundle:
-a fresh machine needs the container image and model volume as well as this repo.
-
-CPU inference can take minutes per photo. Plan for **at least 8 GB RAM allocated
-to Docker (12 GB recommended)** and roughly **10 GB free disk** for builds,
-images and models. These are starting recommendations, not measured minimums.
-The native build defaults to two compiler jobs; inference defaults to four CPU
-threads (`AI_THREADS`). GPU setup is not required.
-
-## Troubleshooting
-
-### Error: `CERTIFICATE_VERIFY_FAILED` when the `models` container starts
+## What Docker runs
 
 ```text
-models-1  | ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED]
-certificate verify failed: self-signed certificate in certificate chain
-models-1  | urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] ...>
-models-1 exited with code 1
+Browser ─► api :8000 (localhost only)   FastAPI + frontend + Kokoro + faster-whisper
+             └─► qwen :8091 (internal)    llama.cpp server, Qwen3-VL GGUF, GPU or CPU
+models  (one-time setup)                  downloads + SHA256-verifies pinned files
+volume  models                            read-only for api and qwen
 ```
 
-**Cause:** The network changes HTTPS traffic with its own root certificate
-(`GOC-GDC-ROOT-A`).
-To fix this, put the certificate in the image.
+Images, conversations and audio stay in memory and are never written to disk;
+restarting the app clears them. Sessions expire after one idle hour. There is no
+authentication: the port is bound to localhost for a local demo.
 
-**Step 1.** Export the certificate. Open **Windows PowerShell** and run:
+## Tests
 
-```PowerShell
-$cert = Get-ChildItem Cert:\LocalMachine\Root |
-  Where-Object { $_.Subject -like "*GOC-GDC-ROOT-A*" }
-
-Export-Certificate -Cert $cert -FilePath "$env:USERPROFILE\GOC-GDC-ROOT-A.cer"
-
-certutil -encode "$env:USERPROFILE\GOC-GDC-ROOT-A.cer" "$env:USERPROFILE\GOC-GDC-ROOT-A.crt"
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest ocr/tests -q          # simulated model server, no weights needed
+node tests/frontend.test.cjs
+node tests/speech.test.cjs
+python tests/live_pipeline.py          # real end-to-end check against the running app
 ```
 
-**Step 2.** Copy the certificate into the `certs` folder in the repository
-root. Open the **WSL** terminal in the repository root and run:
+## Files
 
-```bash
-mkdir -p certs
-cp /mnt/c/Users/<WindowsUsername>/GOC-GDC-ROOT-A.crt certs/
-```
-
-Replace `<WindowsUsername>` with your Windows user name.
-
-**Step 3.** Edit `backend/Dockerfile.offline`. Find the three comment lines
-that start with `# [ROOT CA`. Add the lines below directly under each one.
-
-Under `# [ROOT CA 1/3]` and `# [ROOT CA 3/3]`, add:
-
-```dockerfile
-COPY certs/*.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates
-```
-
-Under `# [ROOT CA 2/3]`, add:
-
-```dockerfile
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-```
-
-**Step 4.** Build the image again without cache, then start the app:
-
-```bash
-docker compose build --no-cache models
-docker compose up
-```
-
-The `models` container now downloads the model files.
-
-## Try it live
-
-1. Open the app and upload one simple, well-lit English/French image or sample.
-2. Wait for interpretation. `needs_review` means the vision result is available,
-   not that processing failed. Warnings/descriptions appear separately.
-3. Press **Read aloud** for Piper audio; the browser may require a playback click.
-4. Type a question and a follow-up. Answers use the saved interpretation/history,
-   without rerunning OCR or vision.
-5. Allow microphone access, record, and stop. Review/correct the Whisper transcript
-   in the question box, then press **Send**. Transcription never auto-submits.
-6. Disconnect internet after setup and repeat reading/chat.
-
-Microphone recording requires localhost or HTTPS. Generated answers use the
-English/French interface language; read-aloud follows the document's detected
-languages (not automatic translation). A failed Piper call preserves a text
-answer. A blocked question has no answer audio or successful history entry.
-Guardrails are lightweight and do not guarantee jailbreak resistance or accuracy.
-
-## What Docker starts
-
-```text
-Browser -> api:8000 (FastAPI + bundled frontend)
-             |-- Tesseract + DocumentProcessor (upload once)
-             |-- Piper (WAV speech)
-             |-- Whisper + FFmpeg (transcript review)
-             `-> qwen:8091 (persistent CPU vision/Q&A server)
-
-models setup -> models volume (pinned, verified artifacts)
-api          -> appdata volume (SQLite, documents/evidence, generated audio)
-```
-
-Only the app is published, bound to localhost. Qwen is internal. API startup
-waits for model provisioning and Qwen health. One expensive operation is allowed
-at a time; a busy request returns `503` so it can be retried.
-
-```bash
-docker compose ps -a
-docker compose logs -f models qwen api
-docker compose down
-```
-
-`down` retains volumes. **Do not use `down -v` unless you intend to delete models
-and saved application data.** The app stores uploaded images/evidence in its
-private document cache. Do not commit or publicly expose these files.
-
-The PoC has no authentication and is intended for local demos. Saved documents
-and history survive backend restarts, but browser page-reload session recovery is
-not wired yet: refreshing starts a new UI session. Keep the tab open for a demo.
-
-## Code and details
-
-- [Backend setup and endpoints](backend/README.md)
-- [Frontend and API contract](frontend/API_CONTRACT.md)
-- [AI provisioning/handoff](handoff/README.md)
-- [Document schema](llm/DOCUMENTS.md)
-- [Speech licenses/attribution](speech/LICENSES.md)
-
-The old OCR-only setup is preserved: `cd backend && docker compose up --build`.
-It does not run the full AI pipeline; use the repository-root Compose file for
-the integrated PoC. No cloud AI services or browser recognition are used by the
-integrated workflow, and the UI has no external font dependency.
+- `start.ps1`, `start.sh` – launchers with GPU detection and CPU fallback.
+- `compose.yaml`, `compose.gpu-*.yaml` – Docker services; one override per GPU type.
+- `backend/` – FastAPI app, sessions, local speech, `provision.py` (model setup), `Dockerfile`.
+- `frontend/` – the finalized UI.
+- `ocr/` – image ingestion, Qwen prompt and response validation, chat.
+- `certs/` – optional extra root certificates (ignored by Git).
+- `demo images/`, `ocr/test images/` – photos for trying the app.

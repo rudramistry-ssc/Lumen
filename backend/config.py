@@ -1,50 +1,29 @@
-"""All configuration lives here. Every field can be overridden by an env var
-with the same name in uppercase (e.g. AI_BASE_URL)."""
-
+"""Model settings, loaded from the environment (Docker Compose) or a repo-root .env."""
 from functools import lru_cache
-from typing import Literal
+from pathlib import Path
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from signspeak_ocr import VlmConfig
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=ROOT / ".env", env_prefix="SIGNSPEAK_VLM_", extra="ignore"
+    )
+    # Docker Compose points this at the internal llama.cpp service (qwen:8091).
+    base_url: str = "http://127.0.0.1:8091/v1"
+    model: str = "lumen-local"
+    api_key: str | None = None
+    # Local CPU inference can take minutes for a large photo; GPUs are faster.
+    timeout_seconds: float = 900.0
 
-    # Where the AI service runs. Compose overrides this with http://ai:8000.
-    ai_base_url: str = "http://localhost:9000"
-    ai_timeout_seconds: float = 120.0
-    image_processing_mode: Literal["ocr_service", "document"] = "ocr_service"
-    document_cache_dir: str = "data/documents"
-    document_timeout_seconds: float = Field(default=600.0, gt=0, allow_inf_nan=False)
-    max_image_pixels: int = Field(default=40_000_000, gt=0)
-    signspeak_llm_url: str = "http://127.0.0.1:8091"
-
-    # Runtime files: sqlite database and generated mp3s. Compose points these at /data.
-    db_path: str = "data/app.db"
-    media_dir: str = "data/media"
-
-    # Static UI folder, served at "/" so browser and API share one origin.
-    # Compose mounts ../frontend at /frontend and sets FRONTEND_DIR.
-    frontend_dir: str = "../frontend"
-
-    # "*" allows any origin; set a comma-separated list for the real frontend.
-    cors_origins: str = "*"
-    max_upload_mb: int = 15
-    # Microphone clips are much smaller than photos; same limit for now.
-    max_audio_mb: int = 15
-    tts_voice: str = "en-US-AvaNeural"  # passed through to the AI service
-    # Off until the AI service offers /v1/tts; scans then return text only.
-    tts_enabled: bool = False
-
-    @property
-    def cors_origin_list(self) -> list[str]:
-        if self.cors_origins.strip() == "*":
-            return ["*"]
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+    def vlm_config(self) -> VlmConfig:
+        return VlmConfig(base_url=self.base_url, model=self.model,
+                         api_key=self.api_key, timeout_seconds=self.timeout_seconds)
 
 
 @lru_cache
 def get_settings() -> Settings:
-    # Cached so .env is read once, not on every request.
     return Settings()

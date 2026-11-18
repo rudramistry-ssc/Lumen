@@ -47,10 +47,6 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 .skip-link:focus { top: 12px; }
 .mono-label { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-3); }
 .mono-dim { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-5); letter-spacing: 0; }
-.document-review { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
-.document-review ul { padding-left: 20px; }
-.document-review summary { color: var(--ink-3); cursor: pointer; font-size: 0.85rem; }
-.document-review pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.75rem; }
 
 /* ---------- shared: pills, segments, logo, eyebrow ---------- */
 .pill {
@@ -157,7 +153,11 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 }
 .lang-select:disabled { color: var(--ink-5); }
 .extract-card[data-state="ready"] .lang-select { border-color: var(--green); color: var(--green-pale); background: var(--green-deep); }
-.confidence { font-family: var(--mono); font-size: 0.75rem; color: var(--green); font-variant-numeric: tabular-nums; }
+.confidence-head { flex-wrap: nowrap; gap: 8px; min-width: 0; width: 100%; overflow-x: auto; }
+.confidence-head .eyebrow { flex: 0 0 auto; white-space: nowrap; }
+.confidence { flex: 0 0 auto; white-space: nowrap; font-family: var(--mono); font-size: 0.68rem; color: var(--green); font-variant-numeric: tabular-nums; line-height: 1.6; }
+.confidence[data-state="loading"], .confidence[data-state="edited"], .confidence[data-state="empty"] { color: var(--ink-3); }
+@media (max-width: 480px) { .confidence-head .eyebrow, .confidence-head .confidence { font-size: 0.64rem; } }
 .copy-btn { margin-left: auto; }
 .copy-btn svg { width: 15px; height: 15px; }
 .extracted-text {
@@ -216,6 +216,7 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 .msg-assistant { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--line); padding-right: 52px; color: var(--ink-2); }
 .msg-user { align-self: flex-end; background: var(--green-deep); border: 1px solid rgba(52, 213, 154, 0.35); color: var(--green-pale); }
 .msg-user .msg-who { color: var(--green); }
+.msg-assistant .msg-who { text-transform: none; }
 .msg.is-pending .msg-body { color: var(--ink-4); font-family: var(--mono); font-size: 0.82rem; }
 .msg.is-pending .msg-body::after { content: "▋"; margin-left: 4px; color: var(--green); animation: blink .9s steps(2) infinite; }
 .msg.is-error { border-color: var(--danger); background: var(--danger-deep); }
@@ -243,9 +244,6 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 .mic-btn.is-listening { background: var(--red); border-color: var(--red); color: #fff; animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 54, 33, .5); } 50% { box-shadow: 0 0 0 8px rgba(255, 54, 33, 0); } }
 .mic-note { margin-top: -8px; }
-
-/* Playback of the clip the user just recorded. */
-.mic-preview { width: 100%; height: 36px; margin-top: -4px; }
 
 .footer-note {
   margin: 0 auto; width: 100%; max-width: 1360px; padding-block: 0 24px;

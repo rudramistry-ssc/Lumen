@@ -13,11 +13,11 @@ html = (ROOT / "index.html").read_text(encoding="utf-8")
 
 
 def inline_css(m):
-    return "<style>\n" + (ROOT / m.group(1)).read_text(encoding="utf-8") + "\n</style>"
+    return "<style>\n" + (ROOT / m.group(1).split("?", 1)[0]).read_text(encoding="utf-8") + "\n</style>"
 
 
 def inline_js(m):
-    code = (ROOT / m.group(1)).read_text(encoding="utf-8").replace("</script", "<\\/script")
+    code = (ROOT / m.group(1).split("?", 1)[0]).read_text(encoding="utf-8").replace("</script", "<\\/script")
     return "<script>\n" + code + "\n</script>"
 
 

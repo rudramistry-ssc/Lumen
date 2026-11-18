@@ -1,16 +1,7 @@
-"""SignSpeak OCR: classical, CPU-only OCR with structured JSON output."""
+"""Single-image transcription and summaries through a vision model (local or remote)."""
+__version__ = "0.3.0"
 
-__version__ = "0.1.0"
+from .config import VlmConfig
+from .analysis import analyze_image, render_report
 
-from .config import IngestConfig, PipelineConfig, PreprocessConfig, QualityConfig, TesseractConfig  # noqa: E402
-from .pipeline import extract_image  # noqa: E402
-
-__all__ = [
-    "IngestConfig",
-    "PipelineConfig",
-    "PreprocessConfig",
-    "QualityConfig",
-    "TesseractConfig",
-    "__version__",
-    "extract_image",
-]
+__all__ = ["VlmConfig", "analyze_image", "render_report"]

@@ -1,0 +1,10 @@
+# Intel GPU (Arc, Iris Xe, Core Ultra) on native Linux, via SYCL / Level Zero.
+# start.sh selects this automatically when usable.
+services:
+  qwen:
+    # llama.cpp v1.0.0 (b12359) Intel SYCL server, pinned by digest.
+    image: ghcr.io/ggml-org/llama.cpp@sha256:4fad818e2ccd0add09b5ede1f51b64ee8c86a9d5fc2c632dab545be3dbea204f
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: ${LUMEN_GPU_LAYERS:-999}
+    devices:
+      - /dev/dri:/dev/dri

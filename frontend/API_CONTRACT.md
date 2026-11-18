@@ -1,208 +1,118 @@
-# API contract (frontend ↔ backend)
+# Image extraction
 
-The UI talks to the FastAPI backend in `backend/`. This file documents what the
-frontend actually calls today. All the calls live in `frontend/api.js`.
+`GET /api/health` returns `{"status": "ok"}` for the original UI's backend status.
+This checks the local API, not GPU model availability.
 
-The backend also serves this folder at `/`, so the browser and the API share one
-origin: no CORS, and `API_BASE_URL` in `config.js` stays `""`.
+`POST /api/extract`
 
-All routes are under `/v1` (plus `/healthz`). Errors return a normal HTTP status
-with FastAPI's default body, `{"detail": "message"}`.
+Request: multipart form with a single file field named `image`, maximum 10 MB.
+Optional form field `session_id` is a UUID; the UI supplies a fresh UUID for each
+session. The server generates one when omitted. Reusing an active session for a
+second image returns 409. Failed extraction releases its reserved session.
 
-## `GET /healthz`
-
-Powers the **Backend connected** / **Backend offline** pill in the top bar.
-
-```json
-{ "status": "ok" }
-```
-
-`/health` is an alias for external pollers.
-
-## `POST /v1/sessions`
-
-Create a session. The frontend calls this once per UI session, then reuses the
-id for every upload and chat message. The "New session" button starts a new one.
-
-```json
-{ "session_id": "…", "text": "", "language": "", "created_at": "…" }
-```
-
-## `POST /v1/sessions/{session_id}/images`
-
-Image → text + language. **Core feature.**
-
-Request: `multipart/form-data`
-
-| field  | type | notes                                              |
-|--------|------|----------------------------------------------------|
-| `file` | file | jpg / png / webp, up to `MAX_UPLOAD_MB` (15 MB)     |
-
-The field is named **`file`**, not `image`.
-
-Response:
+Successful response:
 
 ```json
 {
-  "session_id": "…",
-  "text": "AVIS\nAscenseur hors service.\n…",
-  "language": "fr",
-  "audio_url": "",
-  "ms": 331
+  "session_id": "a18cd7f6-b261-4557-a935-123e44fe8825",
+  "text": "Original image text, preserving line breaks.",
+  "summary": "A short summary of the image.",
+  "language": "en",
+  "summary_language": "en",
+  "confidence": {"text": 96, "summary": 91, "method": "model_estimate"}
 }
 ```
 
-- `language` is `"en"`, `"fr"`, `"mixed"`, or `""` when detection failed.
-- Line breaks in `text` are preserved; the UI shows them as-is.
-- `audio_url` is `""` until the AI service implements `/v1/tts`.
-- There is no `confidence` field. The UI hides the badge when it is missing.
+An image containing symbols without text can return an empty `text` and a useful
+`summary`. The frontend displays both in the Extracted text box.
+`language` is `en`, `fr`, `mixed`, or `none`, detected from the original image
+in the same model request. It is independent of the summary/interface language.
+`none` means no identifiable English/French text (including symbols or unreadable
+text). The dropdown resets to None while a new image is being processed.
+`summary_language` (`en`/`fr`) selects the voice for the generated summary, so a
+French source and an English summary are not spoken entirely in one accent.
+`confidence.text` and `confidence.summary` are integer percentages (0–100) or
+`null` when the model cannot assess them. The model returns both in the same
+request; `method` is assigned by the backend. These are uncalibrated model
+self-assessments, not measured accuracy or token probabilities. `text` must be
+`null` for no-text/unreadable results. Invalid values fail validation rather
+than being clamped or replaced with a fabricated score. The step-02 badge
+updates on completion, clears on reset/failure, and marks edited text as not
+reassessed. Scores are not included in the document text or speech.
+The compact, non-wrapping heading badge shows the lower of the two estimates,
+or `—` if either is unavailable. Its tooltip/accessible label includes both
+individual scores and the aggregation rule. Invalid frontend values never
+become `NaN%`; JavaScript and stylesheet URLs are versioned on updates.
 
-Errors: `404` unknown session, `413` image too large, `415` not an image,
-`422` no readable text found.
+Errors use `{"detail": "message"}`:
+- 413: upload too large.
+- 415: file is not an image.
+- 422: empty or undecodable image.
+- 503: local model container unavailable, too slow (timeout) or incorrectly configured.
+- 502: invalid, truncated or unsuccessful model response.
 
-### Vision-first upload mode
+## Follow-up conversation
 
-With backend `IMAGE_PROCESSING_MODE=document`, the same image route calls the
-local `DocumentProcessor` instead of the OCR HTTP service. It also returns:
-
-- `document_id`, `status`, `selected_method`, `printed_text_status`
-- ordered `sections`, `visual_descriptions`, `text_observations`, `warnings`
-- `ocr_comparison`, `guardrails`, `cache_hit`, `execution_this_call`
-
-`needs_review` means successful selection of unverified vision content.
-`ocr_unreviewed_fallback` is a labelled fallback, not vision success; the UI
-disables read-aloud for it. A symbol-only result can have empty `text`.
-The UI shows descriptions separately from printed text and exposes the metadata.
-Invalid image bytes return `422`, excessive dimensions return `413`, processing
-failure returns `502`, deadline expiry returns `504`, and a busy processor or
-missing AI installation returns `503`. Structured errors have
-`detail.message`, `detail.status`, and available stage/error/warning metadata.
-
-`GET /v1/sessions/{id}/document` returns `{ "session_id": "...", "document": {...} }`
-from persistent SQLite storage without rerunning OCR or vision. Normal session
-retrieval also includes nullable `document_id` and `document_status`.
-New scans reset backend history. Browser page-reload recovery is not wired yet.
-
-The scan itself returns an empty `audio_url`. Read-aloud uses
-`POST /v1/sessions/{id}/read` with form `language=en|fr` and optional
-`include_visual_descriptions=true`. It returns `{ "audio_url": "...wav",
-"metadata": {...} }`; media is served as `audio/wav`.
-
-In document mode, chat accepts form `message` and `language=en|fr` (default en).
-The result includes the existing `transcript`, `reply`, `audio_url`, plus
-`status` (`ok`, `text_only`, `blocked`), `language`, `guardrails`, `warnings`,
-`errors`, `timings` and `history_turns`. History is restored in full from SQLite.
-Piper failures preserve the text answer; blocked turns have no audio/history
-entry and must not be spoken. Qwen failures return `502`. Missing/failed/fallback
-documents return `409`; unsupported languages return `422`. Uploads/read/Q&A
-share a single inference slot, returning `503` if busy.
-
-The UI uses server WAV playback for documents and answers, with pause/stop/rate.
-There is no word highlighting for WAV. Selected text is read-only to keep Q&A
-context consistent. Raw chat audio returns `422`: microphone questions use the review flow below.
-
-### `POST /v1/sessions/{session_id}/transcribe`
-
-In document mode, recording uses this route instead of storing a clip.
-Multipart fields: `file` (browser audio) and `language=auto|en|fr` (default auto).
-Requires a selected vision document. Input is limited to 60 seconds and at most
-8,000,000 bytes (or the configured smaller `MAX_AUDIO_MB` limit).
-
-Response: `status`, `review_text`, `confirmation_required=true`,
-`requested_language`, `suggested_language`, `transcription` and
-`processing_seconds`. Only `ready_for_review` is suitable for submission.
-No-speech and unsupported-language results show a retry/type notice. Missing
-models/runtime return `503`; bad audio `422`; unsupported MIME `415`;
-oversized audio `413`; conversion timeout `504`.
-
-The UI inserts `review_text` into the editable question box and does not
-automatically send it. The user corrects it, then presses Send/Enter, submitting
-the normal `message` and response `language` to `/chat`. Transcription does not
-call Qwen/Piper or append history. It does not retain uploaded microphone audio.
-The recorder has no online speech-recognition fallback.
-
-## `POST /v1/sessions/{session_id}/audio`
-
-Voice clip from the microphone. **Stores it and returns a playable URL; it
-does not transcribe yet** — the AI service has no `/v1/stt`.
-
-Request: `multipart/form-data`
-
-| field  | type | notes                                                          |
-|--------|------|----------------------------------------------------------------|
-| `file` | file | `audio/webm` (Chrome/Edge), `audio/ogg` (Firefox), `audio/mp4` (Safari) |
-
-The field is named **`file`**, like the image upload. The browser records
-with `MediaRecorder` (`Speech.record()` in `speech.js`), so this works
-offline. Clips are capped at `MAX_AUDIO_MB` (15 MB) and the UI stops
-recording automatically after 60 s.
-
-Response `201`:
+`POST /api/chat`, JSON:
 
 ```json
 {
-  "session_id": "…",
-  "clip_id": "b5dc3f846015456683efaca1e5fb7d7f.webm",
-  "audio_url": "/v1/media/b5dc3f846015456683efaca1e5fb7d7f.webm",
-  "bytes": 24576,
-  "content_type": "audio/webm;codecs=opus",
-  "ms": 3
+  "session_id": "a18cd7f6-b261-4557-a935-123e44fe8825",
+  "message": "When does it open?",
+  "language": "en",
+  "context_text": "Current contents of the editable extracted-text box"
 }
 ```
 
-Errors: `404` unknown session, `413` clip too large, `415` not audio or an
-unsupported container, `422` empty file.
+Response: `{"reply": "It opens at 9 am.", "language": "en"}`.
+Replies use plain text; generated Markdown emphasis is removed before storing
+the completed turn. The model's display name is Lumen.
 
-## `POST /v1/sessions/{session_id}/chat`
+`language` is `en` or `fr`; `context_text` is optional. Message limit: 4,000
+characters; edited text limit: 20,000. Additional fields (including client-supplied
+history/system prompts) are rejected. The server sends the image, OCR text,
+summary and all completed turns on every request. Context is limited to 48,000
+characters before model token limits; over-limit requests return 422 without
+dropping history. Model context rejection also returns 422.
 
-Follow-up questions about the scanned text.
+404 means the session is missing/expired; 409 means a request is already running;
+502 means an invalid/incomplete answer; 503 means model connection failure.
 
-Request: `multipart/form-data` — **not JSON**.
+`DELETE /api/sessions/{session_id}` returns 204, including for an already-ended
+session. Deleting during generation discards the eventual answer.
 
-| field     | type | notes                                          |
-|-----------|------|------------------------------------------------|
-| `message` | text | the typed question                             |
-| `audio`   | file | optional recorded clip, `audio/webm` is fine   |
+## Local speech
 
-Send either `message` or `audio`. The backend keeps the scan text and the chat
-history in SQLite, so the client does not resend `context_text`, `language` or
-`history`.
+- `GET /api/speech/status`: `{"local_only": true, "stt": true, "tts": true}` when
+  packages and model files are present (does not load or validate the engines).
+- `POST /api/speech/transcribe`: multipart `audio` (WebM/Opus, Ogg, MP4 or WAV),
+  plus `language` (`en`/`fr`). Returns `{"text": "My question", "language": "en"}`.
+  Upload cap 12 MiB, decoded duration cap 90 seconds; UI records at most 60 seconds.
+- `POST /api/speech/synthesize`: JSON `{"text": "Text to read", "language": "en"}`.
+  Returns mono PCM WAV (`audio/wav`, `Cache-Control: no-store`). Text limit 1,200
+  characters; UI generates clips of at most 120 characters, then joins their PCM
+  into one WAV. The complete reading is prepared before playback starts. An early
+  click has one initial wait; no synthesis runs during playback. Report playback omits interface
+  headings and starts with the extracted content. Both read-aloud
+  controls use Misaki pronunciation and the same local Kokoro voice settings.
+  The app warms the voice during startup. The frontend prepares complete recordings
+  before a speaker click, shares in-flight requests, and caches audio only in
+  session memory (24 MiB / 16 recordings, plus a temporary 24 MiB clip cache).
+  Reset, text edits and language changes clear these caches. Requests are
+  serialized, with selected speech ahead of queued background clips; a stopped
+  request already executing on CPU may finish in the
+  background, but its result cannot start playback after cancellation.
+  Both source and assistant speakers use this continuous playback. The supported Kokoro export uses
+  local OpenVINO FP32 CPU acceleration, with the original ONNX engine as fallback.
+  The server also caches clips in memory for ten minutes (24 MiB / 128 clips).
+  These clips survive browser/session resets and are cleared on server restart.
+  Cache hits bypass inference even while unrelated speech is generating.
 
-Response:
-
-```json
-{ "transcript": "When will it be fixed?", "reply": "…", "audio_url": "" }
-```
-
-The UI reads `reply`. `audio_url` is `""` while TTS is off.
-
-**Not working end to end yet.** The backend forwards to the AI service at
-`/v1/reply` and `/v1/tts`, and `ocr/service.py` does not implement those yet, so
-this route currently answers `502`. The frontend and backend wiring is done; only
-the AI side is missing.
-
-## `GET /v1/sessions/{session_id}`
-
-Session plus its latest scan. Useful after a page reload to recover the text.
-
-## `GET /v1/media/{name}`
-
-Generated audio: TTS MP3s and uploaded voice clips. The `Content-Type`
-follows the extension (`audio/mpeg`, `audio/webm`, `audio/ogg`, `audio/wav`,
-`audio/mp4`). Names are 32 hex characters plus an extension; anything else
-answers `404`.
-
-## Not needed yet
-
-- **Text-to-speech:** done in the browser for now (works offline with the
-  computer's voices). Later this could become `POST /v1/tts` → audio file.
-- **Voice input:** recorded locally with `MediaRecorder` and uploaded to
-  `/v1/sessions/{id}/audio`, which works offline. The missing piece is
-  transcription: the AI service needs `/v1/stt` (Whisper), and the chat route
-  already accepts an `audio` file for that.
-
-## History
-
-An earlier draft of this file specified `/api/health`, `/api/extract` and
-`/api/chat`. The backend's `/v1` session API won: `api.js` was updated to match
-it, and the `/api/*` routes do not exist.
+Both engines run on local CPU using files under workspace `models/`. Missing
+installation returns 503 with setup instructions; invalid/no-speech recordings
+return 422, oversized audio 413, and an already-busy transcription engine 429.
+Synthesis waits for the current inference (maximum lock wait 120 seconds), rather
+than rejecting overlapping speaker clicks. The frontend also bounds each
+generation request to 120 seconds and displays any failure. There is
+no cloud fallback. These endpoints are intended for the loopback app started by
+`start.sh` (published on localhost only). The browser refuses to send speech to a non-loopback API host.

@@ -1,12 +1,28 @@
-# Web framework + ASGI server
-fastapi>=0.115
-uvicorn[standard]>=0.30
+# API image dependencies, pinned to the versions tested with the HPC version.
+# The vision model itself runs in the separate llama.cpp `qwen` container.
+-e ./ocr
+fastapi==0.162.0
+starlette==1.10.0
+uvicorn==0.54.0
+python-multipart==0.0.32
+pydantic==2.14.2
+pydantic-settings==2.16.2
+pillow==13.0.0
+numpy==2.5.4
 
-# HTTP client used by services/ai_client.py
-httpx>=0.27
-
-# Required for multipart form/file uploads
-python-multipart>=0.0.9
-
-# Env-based settings in config.py
-pydantic-settings>=2.4
+# Local speech: faster-whisper (speech-to-text) and Kokoro (text-to-speech).
+faster-whisper==1.2.1
+ctranslate2==4.8.4
+av==19.0.2
+tokenizers==0.23.3
+kokoro-onnx==0.6.1
+onnxruntime==1.31.1
+espeakng-loader==0.2.4
+# Faster local FP32 execution of the same Kokoro weights; original engine fallback.
+openvino==2026.4.1
+onnx==1.23.2
+# Kokoro-native pronunciation, using the small CPU parser (no transformer stack).
+misaki==0.7.4
+num2words==0.5.14
+spacy==3.8.18
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85

@@ -1,0 +1,15 @@
+# NVIDIA GPU (Linux, or Windows via WSL2). Needs the NVIDIA driver and the
+# NVIDIA Container Toolkit. start.sh selects this automatically when usable.
+services:
+  qwen:
+    # llama.cpp v1.0.0 (b12359) CUDA server, pinned by digest.
+    image: ghcr.io/ggml-org/llama.cpp@sha256:a8cf841eef4e9d6ea28bb4d88eea1004032a2bf0d1302bff7b8d2100e801ed16
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: ${LUMEN_GPU_LAYERS:-999}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,10 @@
+# AMD (or other Vulkan-capable) GPU on native Linux.
+# start.sh selects this automatically when usable.
+services:
+  qwen:
+    # llama.cpp v1.0.0 (b12359) Vulkan server, pinned by digest.
+    image: ghcr.io/ggml-org/llama.cpp@sha256:784bb87c7b22cf8653322f3680f33e1fd013d122d817441d5d2fc6410dee68da
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: ${LUMEN_GPU_LAYERS:-999}
+    devices:
+      - /dev/dri:/dev/dri

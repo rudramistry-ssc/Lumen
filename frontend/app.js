@@ -13,17 +13,34 @@
     textScale: store.get("textScale", 1),
     theme: store.get("theme", "dark"), // dark by default; null = follow system
     sessionId: newId(),
+    ready: false,
     file: null,
     text: "",
-    language: "en",
-    history: [], // [{ role, content }]
-    document: null,
-    extracting: false,
+    report: null,
+    confidence: null,
+    language: "none",
     busy: false,
+    stopListening: null,
   };
 
+  let extractSequence = 0;
+  let extractController = null;
+  let stopExtractStages = null;
+  let previewUrl = null;
+  let chatController = null;
+  let chatSequence = 0;
+  let prepareSpeechTimer = null;
+
+  function cancelExtraction() {
+    extractSequence++;
+    if (extractController) extractController.abort();
+    if (stopExtractStages) stopExtractStages(true);
+    extractController = null;
+    stopExtractStages = null;
+  }
+
   function newId() {
-    return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).slice(0, 8);
+    return crypto.randomUUID();
   }
 
   // ---------- i18n ----------
@@ -44,11 +61,26 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
     document.querySelectorAll("[data-ui-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.uiLang === state.uiLang)));
     $("chat-input").placeholder = state.text ? t("chatPlaceholder") : t("chatPlaceholderEmpty");
-    $("session-label").textContent = `· ${t("session")} ${state.sessionId}`;
+    $("session-label").textContent = `· ${t("session")} ${state.sessionId.slice(0, 8)}`;
     updatePlayButton();
-    renderDocumentReview();
-    if (state.document) $("extract-hint").textContent = t("documentReadHint");
     renderStatus();
+    renderConfidence();
+  }
+
+  function renderConfidence() {
+    const badge = $("confidence");
+    const loading = $("extract-card").dataset.state === "loading";
+    const edited = state.ready && state.report?.text !== state.text;
+    const score = value => typeof value === "number" && Number.isFinite(value)
+      && Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
+    const textScore = score(state.confidence?.text), summaryScore = score(state.confidence?.summary);
+    const overall = textScore !== null && summaryScore !== null ? Math.min(textScore, summaryScore) : null;
+    const percent = value => value === null ? "—" : `${value}%`;
+    badge.dataset.state = loading ? "loading" : edited ? "edited" : state.ready ? "ready" : "empty";
+    const scores = `${t("confidenceText")} ${percent(textScore)} · ${t("confidenceSummary")} ${percent(summaryScore)}`;
+    badge.title = `${t("confidenceHelp")}\n${edited ? t("confidenceEdited") : scores}`;
+    badge.textContent = `${t("confidenceLabel")}: ${loading ? t("confidenceAssessing") : edited ? t("confidenceEdited") : percent(overall)}`;
+    badge.setAttribute("aria-label", `${badge.textContent}. ${badge.title}`);
   }
 
   // ---------- settings ----------
@@ -78,7 +110,7 @@
   const dz = $("dropzone");
   dz.addEventListener("click", () => $("file-input").click());
   dz.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file-input").click(); } });
-  $("replace-image").addEventListener("click", () => $("file-input").click());
+  $("replace-image").addEventListener("click", () => { resetSession(); $("file-input").click(); });
   $("file-input").addEventListener("change", (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ""; });
   ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("is-over"); }));
   ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, () => dz.classList.remove("is-over")));
@@ -105,23 +137,25 @@
   });
 
   async function handleFile(file) {
-    if (state.extracting || state.busy || uploading || starting || recorder) return;
     showExtractError("");
+    if (state.file) return showExtractError(t("newImageSession"));
     if (!file.type.startsWith("image/")) return showExtractError(t("errNotImage"));
     if (file.size > cfg.MAX_IMAGE_MB * 1024 * 1024) return showExtractError(t("errTooBig", { mb: cfg.MAX_IMAGE_MB }));
 
     stopAll();
-    state.extracting = true;
-    state.document = null;
-    state.text = "";
-    $("extracted-text").value = "";
-    $("new-session").disabled = true;
-    $("send-btn").disabled = true;
-    $("mic-btn").disabled = true;
-    renderDocumentReview();
+    cancelExtraction();
+    const requestId = extractSequence;
+    extractController = new AbortController();
     state.file = file;
-    const url = URL.createObjectURL(file);
-    $("preview").src = url;
+    state.text = "";
+    state.report = null;
+    state.language = "none";
+    $("lang-select").value = "none";
+    $("extracted-text").value = "";
+    state.confidence = null;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    $("preview").src = previewUrl;
     $("preview").alt = file.name || "Uploaded image";
     $("preview").hidden = false;
     $("drop-empty").hidden = true;
@@ -131,32 +165,42 @@
 
     setExtractState("loading");
     const stopStages = runStages();
+    stopExtractStages = stopStages;
     try {
-      const res = await API.extract(file, state.sessionId);
+      const res = await API.extract(file, state.sessionId, extractController.signal);
+      if (requestId !== extractSequence) { API.closeSession(res.session_id).catch(() => {}); return; }
       await stopStages();
-      state.document = res.status ? res : null;
-      state.text = res.text || "";
-      state.language = res.language || "";
-      state.history = [];
-      $("messages").textContent = "";
+      if (requestId !== extractSequence) return;
+      const sourceLabel = `${t("reportText")}:\n`;
+      const sourceText = res.text || t("noTextExtracted");
+      const summaryLabel = `\n\n${t("reportSummary")}:\n`;
+      state.text = sourceLabel + sourceText + summaryLabel + res.summary;
+      state.report = {
+        text: state.text, sourceStart: sourceLabel.length, sourceEnd: sourceLabel.length + sourceText.length,
+        summaryStart: sourceLabel.length + sourceText.length + summaryLabel.length,
+        labelLanguage: state.uiLang, summaryLanguage: res.summary_language || "en",
+      };
+      state.language = res.language || "none";
+      state.ready = true;
+      prepareSourceSpeech();
       $("extracted-text").value = state.text;
       $("lang-select").value = state.language;
-      $("confidence").textContent = res.confidence != null ? `${Math.round(res.confidence * 100)}%` : "";
+      state.confidence = res.confidence?.method === "model_estimate" ? res.confidence : null;
       setExtractState("ready");
-      addMessage("assistant", res.status ? t("documentReady") : t("gotText", { lang: langName(state.language) }), { speakable: false }).dataset.uiText = "1";
+      addMessage("assistant", t("gotImage"), { speakable: false }).dataset.uiText = "1";
       warnIfNoVoice();
     } catch (err) {
+      if (requestId !== extractSequence || err.name === "AbortError") return;
       console.error(err);
+      state.file = null;
       stopStages(true);
       setExtractState("empty");
-      const errorKey = err.status === 503 && err.retryAfter ? "errAiBusy"
-        : err.status >= 500 ? "errAiService" : "errExtract";
-      showExtractError(`${t(errorKey)} ${errorKey === "errAiBusy" ? "" : err.message || ""}`.trim());
+      showExtractError(err.message || t("errExtract"));
     } finally {
-      state.extracting = false;
-      $("new-session").disabled = false;
-      $("send-btn").disabled = state.document?.status === "ocr_unreviewed_fallback";
-      $("mic-btn").disabled = state.document?.status === "ocr_unreviewed_fallback";
+      if (requestId === extractSequence) {
+        extractController = null;
+        stopExtractStages = null;
+      }
     }
     applyI18n();
   }
@@ -184,50 +228,23 @@
     $("extract-loading").hidden = !loading;
     $("extracted-text").hidden = loading;
     $("extracted-text").disabled = s !== "ready";
-    $("extracted-text").readOnly = !!state.document;
     $("lang-select").disabled = s !== "ready";
-    $("play-btn").disabled = s !== "ready" || (!state.text.trim() && !state.document?.visual_descriptions?.length) || state.document?.status === "ocr_unreviewed_fallback";
+    $("play-btn").disabled = s !== "ready";
     $("stop-btn").disabled = s !== "ready";
     $("copy-btn").disabled = s !== "ready";
-    $("suggestions").hidden = s !== "ready" || state.document?.status === "ocr_unreviewed_fallback";
-    $("extract-hint").textContent = loading ? t("reading") : t(state.document ? "documentReadHint" : "editHint");
+    $("suggestions").hidden = s !== "ready";
+    $("extract-hint").textContent = loading ? t("reading") : t("editHint");
+    renderConfidence();
   }
   function showExtractError(msg) { $("extract-error").textContent = msg; $("extract-error").hidden = !msg; }
 
-  function renderDocumentReview() {
-    const doc = state.document;
-    $("document-review").hidden = !doc;
-    if (!doc) return;
-    $("document-status").textContent = t(doc.status === "ocr_unreviewed_fallback" ? "documentFallback" : "documentNeedsReview");
-    const warnings = $("document-warnings");
-    warnings.textContent = "";
-    for (const warning of doc.warnings || []) {
-      const li = document.createElement("li");
-      li.textContent = typeof warning === "string" ? warning : JSON.stringify(warning);
-      warnings.append(li);
-    }
-    const descriptions = $("document-descriptions");
-    descriptions.textContent = "";
-    for (const description of doc.visual_descriptions || []) {
-      const li = document.createElement("li");
-      li.textContent = description.text;
-      descriptions.append(li);
-    }
-    $("document-visuals").hidden = !(doc.visual_descriptions || []).length;
-    $("document-metadata").textContent = JSON.stringify({
-      session_id: doc.session_id, document_id: doc.document_id,
-      status: doc.status, selected_method: doc.selected_method,
-      printed_text_status: doc.printed_text_status,
-      sections: doc.sections, text_observations: doc.text_observations,
-      ocr_comparison: doc.ocr_comparison, guardrails: doc.guardrails,
-      cache_hit: doc.cache_hit, execution_this_call: doc.execution_this_call,
-      vision_error: doc.vision_error,
-    }, null, 2);
-  }
-
   $("extracted-text").addEventListener("input", (e) => {
     state.text = e.target.value;
-    $("play-btn").disabled = !state.text.trim() || state.document?.status === "ocr_unreviewed_fallback";
+    renderConfidence();
+    stopAll();
+    Speech.clear?.();
+    clearTimeout(prepareSpeechTimer);
+    prepareSpeechTimer = setTimeout(prepareSourceSpeech, 300);
   });
   $("copy-btn").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(state.text); }
@@ -236,96 +253,61 @@
     label.textContent = t("copied");
     setTimeout(() => (label.textContent = t("copy")), 1500);
   });
-  $("lang-select").addEventListener("change", (e) => { state.language = e.target.value; stopAll(); warnIfNoVoice(); });
+  $("lang-select").addEventListener("change", (e) => { state.language = e.target.value; stopAll(); Speech.clear?.(); prepareSourceSpeech(); warnIfNoVoice(); });
 
   function warnIfNoVoice() {
-    if (state.document) return;
-    const need = state.language === "mixed" ? ["en", "fr"] : [state.language];
-    const missing = need.filter((l) => Speech.supported && speechSynthesis.getVoices().length && !Speech.hasLocalVoice(l));
-    if (missing.length) $("extract-hint").textContent = t("noVoice", { lang: missing.map(langName).join(" / ") });
+    $("extract-hint").textContent = t("editHint");
   }
 
   // ---------- read aloud ----------
   let playing = null; // "source" | message element | null
-  const mediaPlayer = new Audio();
-  let playbackGeneration = 0;
-  let readingDocument = false;
-  function playbackEnded() { playing = null; refreshPlaying(); }
-  mediaPlayer.addEventListener("ended", playbackEnded);
-  mediaPlayer.addEventListener("pause", updatePlayButton);
-  mediaPlayer.addEventListener("play", updatePlayButton);
-  mediaPlayer.addEventListener("error", () => {
-    playbackEnded();
-    showExtractError(t("errPlayback"));
-  });
+  function sourceLanguage() { return state.language === "none" ? state.uiLang : state.language; }
+  function sourceLanguageRanges() {
+    const report = state.report;
+    if (!report) return null;
+    let start = report.sourceStart, end = report.sourceEnd, summary = report.summaryStart;
+    if (report.text !== state.text) {
+      // Corrections in the textarea change offsets, but the UI's headings
+      // must not become spoken content as a side effect of those edits.
+      const prefix = report.text.slice(0, report.sourceStart);
+      const separator = report.text.slice(report.sourceEnd, report.summaryStart);
+      const index = state.text.lastIndexOf(separator);
+      if (!state.text.startsWith(prefix) || index < prefix.length) return null;
+      start = prefix.length; end = index; summary = index + separator.length;
+    }
+    return [{ start, end, language: sourceLanguage() },
+      { start: summary, end: state.text.length, language: report.summaryLanguage }];
+  }
+  function prepareSourceSpeech() {
+    if (!state.ready || !Speech.prepare) return;
+    // Warm the audio cache silently in the background; the UI only reports
+    // "Preparing audio…" once the user actually presses Read aloud.
+    Promise.resolve(Speech.prepare(state.text, sourceLanguage(), { languageRanges: sourceLanguageRanges() })).catch(() => {});
+  }
   function updatePlayButton() {
     const srcPlaying = playing === "source";
-    const paused = srcPlaying && (state.document ? mediaPlayer.paused : Speech.paused);
-    $("play-label").textContent = !srcPlaying ? t("readAloud") : paused ? t("resume") : t("pause");
+    const paused = srcPlaying && Speech.paused;
+    const preparing = srcPlaying && Speech.loading;
+    $("play-label").textContent = preparing ? t("preparingSpeech") : !srcPlaying ? t("readAloud") : paused ? t("resume") : t("pause");
+    $("play-btn").setAttribute("aria-busy", String(preparing));
     $("play-icon").setAttribute("d", srcPlaying && !paused ? "M7 5h4v14H7zM13 5h4v14h-4z" : "M8 5v14l11-7z");
     $("play-btn").classList.toggle("is-playing", srcPlaying && !paused);
   }
-  $("play-btn").addEventListener("click", async () => {
-    if (readingDocument) return;
-    if (state.document) {
-      if (playing === "source") {
-        if (mediaPlayer.paused) {
-          try { await mediaPlayer.play(); }
-          catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
-        } else mediaPlayer.pause();
-        return;
-      }
-      stopAll();
-      const generation = playbackGeneration;
-      const doc = state.document;
-      const language = ["en", "fr"].includes(state.language) ? state.language : state.uiLang;
-      readingDocument = true;
-      $("play-btn").disabled = true;
-      showExtractError("");
-      try {
-        if (!doc.audio_url || doc.audio_language !== language) {
-          const res = await API.readDocument(state.sessionId, language);
-          doc.audio_url = res.audio_url;
-          doc.audio_language = language;
-        }
-        if (generation === playbackGeneration) await playAudio(doc.audio_url, "source");
-      } catch (err) {
-        if (generation === playbackGeneration) showExtractError(`${t("errPlayback")} ${err.message}`);
-      } finally {
-        readingDocument = false;
-        if (state.document === doc) $("play-btn").disabled = false;
-      }
-      return;
-    }
+  $("play-btn").addEventListener("click", () => {
     if (playing === "source") {
+      if (Speech.loading) return;
       Speech.paused ? Speech.resume() : Speech.pause();
       return setTimeout(updatePlayButton, 30);
     }
-    speak(state.text, state.language, "source");
+    speak(state.text, sourceLanguage(), "source");
   });
   function stopAll() {
-    playbackGeneration++;
-    mediaPlayer.pause();
-    mediaPlayer.removeAttribute("src");
-    mediaPlayer.load();
-    Speech.stop();
-    playing = null;
-    refreshPlaying();
-  }
-  async function playAudio(url, owner) {
-    stopAll();
-    mediaPlayer.src = apiUrl(url);
-    mediaPlayer.playbackRate = Number($("rate").value);
-    playing = owner;
-    refreshPlaying();
-    try { await mediaPlayer.play(); }
-    catch (err) { playing = null; refreshPlaying(); throw err; }
+    Speech.stop(); playing = null; refreshPlaying();
+    if ($("mic-note").dataset.speech === "loading") $("mic-note").hidden = true;
+    $("mic-note").dataset.speech = "";
   }
   $("stop-btn").addEventListener("click", stopAll);
-  $("rate").addEventListener("input", (e) => {
-    $("rate-out").textContent = Number(e.target.value).toFixed(1) + "×";
-    mediaPlayer.playbackRate = Number(e.target.value);
-  });
+  $("rate").addEventListener("input", (e) => ($("rate-out").textContent = Number(e.target.value).toFixed(1) + "×"));
 
   // Word-by-word highlight while the source text is read aloud
   let wordSpans = [];
@@ -372,18 +354,20 @@
 
   function speak(text, lang, owner) {
     if (!text.trim()) return;
-    const needed = lang === "mixed" ? ["en", "fr"] : [lang];
-    if (needed.some((code) => !Speech.hasLocalVoice(code))) {
-      showExtractError(t("noVoice", { lang: needed.map(langName).join(" / ") }));
-      return;
-    }
-    stopAll();
     if (owner === "source") showReadingView(text); else hideReadingView();
     Speech.speak(text, lang, {
       rate: Number($("rate").value),
+      languageRanges: owner === "source" ? sourceLanguageRanges() : null,
       onBoundary: owner === "source" ? highlightAt : null,
       onStart: () => { playing = owner; refreshPlaying(); },
+      onState: (status) => {
+        const note = $("mic-note");
+        if (status === "loading") { note.dataset.speech = "loading"; note.textContent = t("preparingSpeech"); note.hidden = false; }
+        else if (note.dataset.speech === "loading") { note.dataset.speech = ""; note.hidden = true; }
+        refreshPlaying();
+      },
       onEnd: () => { if (playing === owner) { playing = null; refreshPlaying(); } },
+      onError: (error) => { $("mic-note").dataset.speech = "error"; $("mic-note").textContent = error.message || t("speechError"); $("mic-note").hidden = false; },
     });
     playing = owner;
     refreshPlaying();
@@ -411,23 +395,25 @@
     li.scrollIntoView({ block: "end", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     return li;
   }
-  function addSpeakButton(li) {
+  function addSpeakButton(li, prepare = true) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "msg-speak";
     b.setAttribute("aria-label", t("listen"));
     b.title = t("listen");
     b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-    b.addEventListener("click", async () => {
-      if (playing === li) return stopAll();
-      if (li.dataset.audioUrl) {
-        try { await playAudio(li.dataset.audioUrl, li); }
-        catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
-        return;
-      }
-      speak(li.querySelector(".msg-body").textContent, li.dataset.uiText ? state.uiLang : li.dataset.lang || replyLang(), li);
+    b.addEventListener("click", () => {
+      if (playing === li) { stopAll(); return; }
+      speak(li.querySelector(".msg-body").textContent, messageVoice(li), li);
     });
     li.append(b);
+    if (prepare) Speech.prepare?.(li.querySelector(".msg-body").textContent, messageVoice(li));
+  }
+  // Interface strings are in the UI language. Answers are requested in it too,
+  // but can quote a French sign or be written in French, so detect each
+  // sentence and quotation and fall back to the requested language.
+  function messageVoice(li) {
+    return li.dataset.uiText ? state.uiLang : "auto:" + (li.dataset.lang || replyLang());
   }
   // Answers come back in the interface language, so an English speaker can
   // understand a French sign and the other way round.
@@ -445,17 +431,18 @@
   async function send() {
     const input = $("chat-input");
     const message = input.value.trim();
-    if (!message || state.busy || state.extracting || uploading || starting || recorder) return;
-    if (state.document?.status === "ocr_unreviewed_fallback") {
-      showNote("documentFallback");
-      return;
-    }
+    if (!message || state.busy || state.stopListening) return;
+    if (!state.ready) { $("mic-note").textContent = t("uploadFirst"); $("mic-note").hidden = false; return; }
+    Speech.unlock?.();
+    stopAll();
+    const sequence = ++chatSequence;
+    chatController = new AbortController();
     input.value = "";
     autoGrow();
     addMessage("user", message);
     state.busy = true;
-    $("new-session").disabled = true;
     $("send-btn").disabled = true;
+    $("mic-btn").disabled = true;
     const pending = addMessage("assistant", t("thinking"), { speakable: false, pending: true });
     try {
       const res = await API.chat({
@@ -463,157 +450,63 @@
         message,
         contextText: state.text,
         language: replyLang(),
-        history: state.history,
-      });
-      const blocked = res.status === "blocked";
-      if (!blocked) state.history.push({ role: "user", content: message }, { role: "assistant", content: res.reply });
+      }, chatController.signal);
+      if (sequence !== chatSequence) return;
       pending.classList.remove("is-pending");
       pending.querySelector(".msg-body").textContent = res.reply;
       pending.dataset.lang = res.language || replyLang();
-      if (res.audio_url && !blocked) pending.dataset.audioUrl = res.audio_url;
-      if (res.errors?.length) {
-        const note = document.createElement("p");
-        note.className = "hint";
-        note.textContent = t("answerTextOnly") + " " + res.errors.map((error) => error.message).join(" ");
-        pending.append(note);
-      }
-      if (!blocked && (!state.document || res.audio_url)) addSpeakButton(pending);
-      if (blocked) pending.classList.add("is-notice");
-      if ($("auto-read").checked && !blocked) {
-        if (res.audio_url) {
-          try { await playAudio(res.audio_url, pending); }
-          catch (err) { showExtractError(`${t("errPlayback")} ${err.message}`); }
-        } else if (!state.document) speak(res.reply, pending.dataset.lang, pending);
-      }
+      addSpeakButton(pending);
+      if ($("auto-read").checked) speak(res.reply, messageVoice(pending), pending);
     } catch (err) {
+      if (sequence !== chatSequence || err.name === "AbortError") return;
       console.error(err);
       pending.classList.remove("is-pending");
       pending.classList.add("is-error");
-      const networkFailure = !err.status;
-      pending.querySelector(".msg-body").textContent = networkFailure
-        ? t("errChatConnection")
-        : `${t("errChat")} ${err.message || ""}`;
-      if (!input.value.trim()) input.value = message;
-      autoGrow();
+      pending.querySelector(".msg-body").textContent = err.message || t("errChat");
+      if (!input.value) input.value = message;
     } finally {
-      state.busy = false;
-      $("new-session").disabled = false;
-      $("send-btn").disabled = false;
-      input.focus();
+      if (sequence === chatSequence) {
+        state.busy = false;
+        chatController = null;
+        $("send-btn").disabled = false;
+        $("mic-btn").disabled = false;
+        input.focus();
+      }
     }
   }
 
   // ---------- voice input ----------
-  // Document audio is transcribed locally; the user must press Send after review.
-  let recorder = null;
-  let uploading = false;
-  let starting = false; // true while the browser is asking for the mic
-
-  function setMicState(active) {
-    $("mic-btn").classList.toggle("is-listening", active);
-    $("mic-btn").setAttribute("aria-pressed", String(active));
-  }
-
-  function showNote(key, vars) {
-    const note = $("mic-note");
-    note.textContent = t(key, vars);
-    note.hidden = false;
-  }
-
-  function hideNote() {
-    const note = $("mic-note");
-    note.hidden = true;
-    note.textContent = "";
-  }
-
-  // Relative media URLs need the API origin when the UI is served separately;
-  // blob: URLs from demo mode are used as-is.
-  function apiUrl(path) {
-    if (!path || /^(blob:|data:|https?:)/i.test(path)) return path || "";
-    return (cfg.API_BASE_URL || "").replace(/\/$/, "") + path;
-  }
-
-  async function stopRecordingAndUpload() {
-    if (!recorder) return;
-    const current = recorder;
-    recorder = null;
-    setMicState(false);
-    uploading = true;
-    $("new-session").disabled = true;
-    $("send-btn").disabled = true;
-    $("mic-btn").disabled = true;
-    $("chat-input").disabled = true;
-    try {
-      const blob = await current.stop();
-      if (!blob || !blob.size) { showNote("micEmpty"); return; }
-      if (state.document) {
-        showNote("micTranscribing");
-        const res = await API.transcribe(state.sessionId, blob);
-        if (res.status === "ready_for_review") {
-          $("chat-input").value = res.review_text;
-          autoGrow();
-          showNote("micReview");
-          const warnings = res.transcription?.warnings || [];
-          if (warnings.length) $("mic-note").textContent += " " + warnings.join(" ");
-          $("chat-input").focus();
-        } else {
-          showNote("micNoTranscript");
-          $("mic-note").textContent += ` (${res.status})`;
-        }
-      } else {
-        showNote("micUploading");
-        const res = await API.uploadAudio(state.sessionId, blob);
-        const audio = $("mic-preview");
-        audio.src = apiUrl(res.audio_url);
-        audio.hidden = false;
-        showNote("micRecorded");
-      }
-    } catch (err) {
-      console.error(err);
-      showNote("micUploadFailed");
-      $("mic-note").textContent += " " + (err.message || "");
-    } finally {
-      uploading = false;
-      $("new-session").disabled = false;
-      $("send-btn").disabled = false;
-      $("mic-btn").disabled = false;
-      $("chat-input").disabled = false;
-      $("chat-input").focus();
-    }
-  }
-
-  async function startRecording() {
-    if (starting) return; // ignore double-clicks while the mic prompt is open
-    starting = true;
-    $("new-session").disabled = true;
-    hideNote();
-    stopAll();
-    try {
-      recorder = await Speech.record({
-        maxMs: 60000,
-        onAutoStop: () => stopRecordingAndUpload(),
-      });
-    } catch (err) {
-      const code = err && err.name === "NotAllowedError" ? "micDenied"
-        : err && err.name === "NotFoundError" ? "micNoDevice"
-        : "micUnsupported";
-      showNote(code);
-      return;
-    } finally {
-      starting = false;
-      $("new-session").disabled = !!recorder;
-    }
-    setMicState(true);
-    showNote("micRecording");
-  }
-
   $("mic-btn").addEventListener("click", () => {
-    if (uploading || starting || state.busy || state.extracting) return;
-    if (recorder) { stopRecordingAndUpload(); return; }
-    if (state.document?.status === "ocr_unreviewed_fallback") { showNote("documentFallback"); return; }
-    if ($("chat-input").value.trim()) { showNote("micDraft"); return; }
-    if (Speech.canRecord) { startRecording(); return; }
-    showNote("micUnsupported");
+    const note = $("mic-note");
+    if (state.busy) return;
+    if (!state.ready) { note.textContent = t("uploadFirst"); note.hidden = false; return; }
+    if (state.stopListening) { state.stopListening(); return; }
+    if (!Speech.canListen) { note.textContent = t("micUnsupported"); note.hidden = false; return; }
+    stopAll();
+    note.textContent = t("listening");
+    note.hidden = false;
+    $("mic-btn").classList.add("is-listening");
+    $("send-btn").disabled = true;
+    const session = state.sessionId;
+    let failed = false;
+    state.stopListening = Speech.listen(replyLang(), {
+      onResult: (text) => { if (session !== state.sessionId) return; state.stopListening = null; $("chat-input").value = text; autoGrow(); send(); },
+      onState: (status) => {
+        if (session !== state.sessionId) return;
+        note.textContent = t(status === "transcribing" ? "transcribing" : "listening");
+        $("mic-btn").disabled = status === "transcribing";
+        $("mic-btn").classList.toggle("is-listening", status === "recording");
+      },
+      onError: (err) => { if (session !== state.sessionId) return; failed = true; note.textContent = err.code === "not-allowed" ? t("micDenied") : err.message || t("speechError"); },
+      onEnd: () => {
+        if (session !== state.sessionId) return;
+        state.stopListening = null;
+        $("mic-btn").classList.remove("is-listening");
+        $("send-btn").disabled = state.busy;
+        $("mic-btn").disabled = state.busy;
+        if (!failed) note.hidden = true;
+      },
+    });
   });
 
   // ---------- top bar ----------
@@ -626,20 +519,25 @@
   $("new-session").addEventListener("click", resetSession);
 
   function resetSession() {
+    const oldSession = state.sessionId;
+    chatSequence++;
+    chatController?.abort();
+    chatController = null;
     stopAll();
-    if (recorder) { const r = recorder; recorder = null; r.stop().catch(() => {}); }
-    uploading = false;
-    setMicState(false);
-    hideNote();
-    const micPreview = $("mic-preview");
-    micPreview.pause();
-    micPreview.hidden = true;
-    micPreview.removeAttribute("src");
-    Object.assign(state, { sessionId: newId(), file: null, text: "", language: "en", history: [], document: null });
+    clearTimeout(prepareSpeechTimer);
+    Speech.clear?.();
+    cancelExtraction();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    state.stopListening?.abort();
+    if (state.file) API.closeSession(oldSession).catch(() => {});
+    Object.assign(state, { sessionId: newId(), ready: false, busy: false, stopListening: null, file: null, text: "", report: null, confidence: null, language: "none" });
     $("send-btn").disabled = false;
     $("mic-btn").disabled = false;
+    $("mic-btn").classList.remove("is-listening");
+    $("mic-note").hidden = true;
     $("chat-input").value = "";
-    renderDocumentReview();
+    autoGrow();
     playing = null;
     $("preview").hidden = true;
     $("preview").removeAttribute("src");
@@ -647,18 +545,30 @@
     dz.classList.remove("has-image");
     $("image-actions").hidden = true;
     $("extracted-text").value = "";
-    $("confidence").textContent = "";
-    $("lang-select").value = "en";
+    $("lang-select").value = "none";
     showExtractError("");
     setExtractState("empty");
     $("messages").innerHTML = "";
-    const w = addMessage("assistant", t("welcome"), { speakable: true });
+    const w = addMessage("assistant", t("welcome"), { speakable: false });
+    // The static greeting must not occupy the voice engine while OCR arrives.
+    addSpeakButton(w, false);
     w.dataset.uiText = "1";
     w.querySelector(".msg-body").dataset.i18n = "welcome"; // re-translates with the UI
     applyI18n();
   }
 
   // ---------- start ----------
+  window.addEventListener("pagehide", () => {
+    cancelExtraction();
+    chatSequence++;
+    chatController?.abort();
+    state.stopListening?.abort();
+    Speech.stop();
+    clearTimeout(prepareSpeechTimer);
+    Speech.clear?.();
+    if (state.file) API.closeSession(state.sessionId).catch(() => {});
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  });
   applyScale();
   applyTheme();
   resetSession();

@@ -1,31 +1,14 @@
-"""Typed errors with stable machine-readable codes for the JSON output."""
-
-from __future__ import annotations
-
-from typing import Any
-
-
+"""Stable error codes for input and model failures."""
 class OcrError(Exception):
-    """Base error. ``code`` is stable and appears in ``errors[].code``."""
-
     code = "ocr_error"
-    recoverable = False
 
-    def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
+    def __init__(self, message: str, *, details: dict | None = None):
         super().__init__(message)
         self.message = message
         self.details = details or {}
 
-    def to_dict(self, stage: str) -> dict[str, Any]:
-        record: dict[str, Any] = {
-            "stage": stage,
-            "code": self.code,
-            "message": self.message,
-            "recoverable": self.recoverable,
-        }
-        if self.details:
-            record["details"] = self.details
-        return record
+    def to_dict(self, stage: str) -> dict:
+        return {"stage": stage, "code": self.code, "message": self.message, **({"details": self.details} if self.details else {})}
 
 
 class InputError(OcrError):
@@ -44,21 +27,9 @@ class ConfigError(OcrError):
     code = "invalid_config"
 
 
-class TesseractNotFoundError(OcrError):
-    code = "tesseract_not_found"
+class VlmConnectionError(OcrError):
+    code = "vlm_connection_failed"
 
 
-class TesseractLanguageError(OcrError):
-    code = "tesseract_language_missing"
-
-
-class TesseractExecutionError(OcrError):
-    code = "tesseract_failed"
-
-
-class TesseractTimeoutError(TesseractExecutionError):
-    code = "tesseract_timeout"
-
-
-class TsvParseError(OcrError):
-    code = "tsv_invalid"
+class VlmResponseError(OcrError):
+    code = "vlm_invalid_response"

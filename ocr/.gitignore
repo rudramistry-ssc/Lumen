@@ -13,3 +13,4 @@ eval/benchmark/results/
 eval/benchmark/summary.json
 eval/benchmark/run.json
 *.log
+results/

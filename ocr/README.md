@@ -1,48 +1,62 @@
 # SignSpeak OCR
 
-CPU-only English/French OCR with image preprocessing, word boxes and a structured JSON result.
-The package exposes three downstream views for SignSpeak's user interface, speech playback and local LLM.
-No model API or network connection is needed for inference.
+Single-image transcription and visual summaries through an OpenAI-compatible
+vision model. In this offline demo that is Qwen3-VL in the local llama.cpp
+`qwen` container; this package itself loads no model weights.
 
-## Install on Windows (Python 3.13)
+The browser integration is documented in [workspace README](../README.md).
+The app sends an image to `/v1/chat/completions`; the local Qwen3-VL model
+(2B by default, 8B optional) produces the text and summary.
+It also returns `confidence: {"text": 0–100 or null, "summary": 0–100 or null}`
+in that same response. These are uncalibrated model self-assessments, not
+verified accuracy. No-text/unreadable results have `text: null`. Invalid or
+missing confidence fields are rejected by the image-analysis contract.
 
-From the `CanAI_Team_E` repository root:
-
-```powershell
-py -3.13 -m venv .\ocr\.venv
-$py = Join-Path (Get-Location) 'ocr\.venv\Scripts\python.exe'
-Push-Location ocr
-& $py -m pip install -e '.[preprocess]'
-Pop-Location
-& $py -m signspeak_ocr check
-```
-
-Tesseract must be installed separately with English and French language data. Set
-`SIGNSPEAK_TESSERACT_CMD` to its executable if it is not on PATH. In Docker,
-install the Linux Tesseract executable and language data inside the container.
-
-## Extract an image
-
-```powershell
-& $py -m signspeak_ocr extract .\path\to\photo.png --preprocess -o result.json
-```
+## Python API
 
 ```python
-from signspeak_ocr import PipelineConfig, PreprocessConfig, extract_image
-from signspeak_ocr.integration import adapt_result
+from signspeak_ocr import VlmConfig, analyze_image, render_report
 
-source = extract_image('photo.png', PipelineConfig(preprocessing=PreprocessConfig(enabled=True)))
-views = adapt_result(source)
-print(views['display']['text'])
-# The backend can also use views['speech'] and views['llm_context'].
+result = analyze_image(image_bytes, vlm_config=VlmConfig())
+print(result["text"])
+print(result["summary"])
 ```
 
-The OCR source JSON remains the source of truth; extracted values are not independently
-verified. Display boxes use the oriented original image's pixel coordinates.
-The application should preserve uncertainty flags for disputed numbers.
+VLM configuration comes from `SIGNSPEAK_VLM_BASE_URL`,
+`SIGNSPEAK_VLM_MODEL`, and `SIGNSPEAK_VLM_API_KEY`.
+Only the web app automatically reads the workspace `.env`.
 
-## Evaluation
+The existing VLM prompt and strict JSON validation are retained, along with
+EXIF orientation, aspect-preserving resizing, authentication, bounded transient
+retries and rejection of truncated output. Text remains in its original
+language. The summary defaults to English. Symbol-only images are supported.
+The structured result includes `language` (`en`, `fr`, `mixed`, `none`) detected
+from the image, separately from the summary language. Generated summaries use
+plain text; the source transcription retains literal punctuation.
 
-The fixed 20-image synthetic benchmark, reference transcripts and a paired evaluation
-script are in [`eval/`](eval/README.md). Real photographs and Docker operation have
-not been validated by this benchmark.
+## Command line
+
+```powershell
+python -m signspeak_ocr check
+python -m signspeak_ocr extract "ocr/test images/one.png"
+python ocr/run_test_images.py
+```
+
+Set model environment variables before using these commands. Batch testing runs
+the same pipeline once per image and writes `ocr/out.txt`. Optional
+`--json-dir ocr/results` saves diagnostics; the browser only receives text and summary.
+Use `--summary-language French` to change the CLI summary language.
+
+## Optional vLLM server
+
+Docker Compose serves the model with llama.cpp. `serve_vlm.py` remains available
+for launching the full-precision model with vLLM on a separate NVIDIA GPU server.
+Keep your existing working server configuration. For a new launch, supply
+`SIGNSPEAK_MODEL_PATH`, `SIGNSPEAK_VLM_MODEL` and `SIGNSPEAK_VLM_API_KEY`,
+then run `python ocr/serve_vlm.py` on the GPU node.
+The model is loaded once in the server, not once per uploaded image.
+
+No Tesseract, OpenCV or database dependency is required. The package's `chat.py`
+reuses the same model HTTP connection for image follow-ups. The web app's local
+Whisper/Kokoro speech dependencies are listed separately in `requirements-speech.txt`.
+All original image files are preserved.
