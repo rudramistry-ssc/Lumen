@@ -2,6 +2,7 @@
 
 import io
 import json
+import os
 import sys
 import threading
 from collections import deque
@@ -12,6 +13,8 @@ import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# The app pre-loads the real model at startup; tests use a fake server instead.
+os.environ["LUMEN_WARM_MODEL"] = "0"
 
 
 @pytest.fixture
@@ -24,8 +27,7 @@ def image_bytes():
 @pytest.fixture
 def model_answer():
     return {"extracted_text": "Livraison reportée\n16 h 15", "summary": "A delivery notice with a revised arrival time.",
-            "text_status": "readable", "language": "fr", "uncertainties": [],
-            "confidence": {"text": 96, "summary": 91}}
+            "language": "fr", "text_confidence": 96, "summary_confidence": 91}
 
 
 def completion(answer, *, finish_reason="stop"):

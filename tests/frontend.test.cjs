@@ -187,9 +187,13 @@ test('chat requires successful extraction and displays returned answers in the e
   ui.upload(photo); await tick();
   ui.send('When?'); await tick();
   assert.equal(calls.length, 1);
-  assert.match(calls[0].contextText, /Open 9 am/);
+  assert.equal(calls[0].contextText, '', 'the model already has the unedited reading');
   assert.equal(ui.get('messages').children.at(-1).querySelector('.msg-body').textContent, 'At 9 am.');
   assert.equal(ui.get('send-btn').disabled, false);
+  const edited = ui.get('extracted-text').value.replace('9 am', '10 am');
+  ui.get('extracted-text').handlers.input({ target: { value: edited } });
+  ui.send('When now?'); await tick();
+  assert.equal(calls[1].contextText, edited, 'user corrections are sent');
 });
 
 test('New session aborts pending chat and prevents an old reply or autoplay', async () => {

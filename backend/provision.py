@@ -6,8 +6,10 @@ the volume read-only and run fully offline afterwards. Existing files are checke
 without network access. A verified file is not re-hashed while its size and
 modification time are unchanged (recorded in .verified.json).
 
-    LUMEN_MODEL_SIZE=2B   (default) Qwen3-VL-2B-Instruct, Q4_K_M + Q8_0 projector
-    LUMEN_MODEL_SIZE=8B   Qwen3-VL-8B-Instruct, Q4_K_M + Q8_0 projector
+    LUMEN_MODEL_SIZE=2B   (default) Qwen3-VL-2B-Instruct, Q4_K_M + F16 projector
+    LUMEN_MODEL_SIZE=8B   Qwen3-VL-8B-Instruct, Q4_K_M + F16 projector
+
+The F16 vision projector encodes an image ~35% faster than Q8_0 on a GPU.
 """
 import hashlib
 import json
@@ -25,14 +27,14 @@ QWEN = {
     "2B": ("Qwen/Qwen3-VL-2B-Instruct-GGUF", "52d6c8ffea26cc873ac5ad116f8631268d7eb503", {
         "Qwen3VL-2B-Instruct-Q4_K_M.gguf":
             (1107409952, "089d75c52f4b7ffc56ba998ffc50aae89fcafc755f9e7208aacca281dca6c2ae"),
-        "mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf":
-            (445053216, "f9a68fabba69c3b81e153367b2c7521030b0fa8bb0de400c9599c8e6725f9c82"),
+        "mmproj-Qwen3VL-2B-Instruct-F16.gguf":
+            (819394848, "c3d5afbef5287953acd57b4043d2269456e5761a4eaccb3b71b062996970aea5"),
     }),
     "8B": ("Qwen/Qwen3-VL-8B-Instruct-GGUF", "f982a07559d4a2f6c8744d840bf6fccab30eea96", {
         "Qwen3VL-8B-Instruct-Q4_K_M.gguf":
             (5027784800, "67d1659bfe71b89d50b45a4ad1a9e5b997e5bb16ce5da66a6a6167abd569e9e2"),
-        "mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf":
-            (752289728, "c6ba85508d82f42590e6eb77d5340369ab6fecf107a7561d809523d8aa5f3bfd"),
+        "mmproj-Qwen3VL-8B-Instruct-F16.gguf":
+            (1159029824, "ca524100ebf825c9a870db1c580d03879e0da0ab2541697e2458e64891cf9d38"),
     }),
 }
 

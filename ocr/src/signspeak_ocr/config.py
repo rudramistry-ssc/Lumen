@@ -27,9 +27,13 @@ class VlmConfig:
     api_key: str | None = field(default_factory=lambda: os.getenv(
         "SIGNSPEAK_VLM_API_KEY"), repr=False)
     timeout_seconds: float = 180.0
-    max_tokens: int = 4096
-    max_image_edge: int = 2560
-    max_image_pixels: int = 4_000_000
+    # The longest demo answer (a nutrition table) is ~350 tokens. The cap only
+    # matters if the model ever loops despite the DRY sampler.
+    max_tokens: int = 768
+    # Qwen3-VL reads one token per 32x32 pixels: 0.5 MP is ~500 image tokens,
+    # ~10 s faster per photo than 1 MP with near-identical transcriptions.
+    max_image_edge: int = 1280
+    max_image_pixels: int = 500_000
     response_format: str = "json_schema"
     summary_language: str = "English"
     max_retries: int = 1

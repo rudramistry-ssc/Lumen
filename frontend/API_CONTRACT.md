@@ -60,7 +60,7 @@ Errors use `{"detail": "message"}`:
   "session_id": "a18cd7f6-b261-4557-a935-123e44fe8825",
   "message": "When does it open?",
   "language": "en",
-  "context_text": "Current contents of the editable extracted-text box"
+  "context_text": "The extracted-text box, only if the user edited it"
 }
 ```
 
@@ -70,10 +70,12 @@ the completed turn. The model's display name is Lumen.
 
 `language` is `en` or `fr`; `context_text` is optional. Message limit: 4,000
 characters; edited text limit: 20,000. Additional fields (including client-supplied
-history/system prompts) are rejected. The server sends the image, OCR text,
-summary and all completed turns on every request. Context is limited to 48,000
-characters before model token limits; over-limit requests return 422 without
-dropping history. Model context rejection also returns 422.
+history/system prompts) are rejected. Every request repeats the image
+conversation (image, the model's own JSON reading, all completed turns), which
+the model server already has cached, so only the new question is processed.
+Conversations are limited to 18,000 characters (the model has an 8k-token
+context); over-limit requests return 422 without dropping history. Model
+context rejection also returns 422.
 
 404 means the session is missing/expired; 409 means a request is already running;
 502 means an invalid/incomplete answer; 503 means model connection failure.

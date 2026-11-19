@@ -15,14 +15,20 @@ The separate `summary_language` field selects the summary's playback voice.
 `confidence` contains separate `text`/`summary` integer percentages (or `null`)
 and `method: "model_estimate"`. Qwen supplies them in the same image request.
 They are self-assessments, not calibrated accuracy measurements. The parser
-rejects out-of-range, non-integer and invalid no-text estimates.
+rejects out-of-range and non-integer estimates; an image without text always
+gets `language: "none"` and a `null` text estimate.
 The request goes to the internal `qwen` container (llama.cpp), on a GPU when
-usable, otherwise on the CPU.
+usable, otherwise on the CPU. Once the model server is up, the app sends it one
+small image in each orientation in the background (`warm_model`), so the first
+real photo does not pay for loading the vision encoder or compiling GPU kernels.
+Set `LUMEN_WARM_MODEL=0` to skip this.
 
-`POST /api/chat` looks up that session, sends its prepared image, original text,
-summary, uncertainty notes, edited display text, all completed turns and the
-current question to the same Qwen endpoint. Successful answers are appended to
-server-owned history. A failed generation does not enter history. One request
+`POST /api/chat` continues the session's image conversation exactly as the model
+saw it (system prompt, image, the model's JSON answer, all completed turns) and
+adds the question, plus the edited display text only when the user changed it.
+Because that prefix is identical, llama.cpp reuses its cache instead of encoding
+the image again, so an answer costs only the new question and the reply.
+Successful answers are appended to server-owned history. A failed generation does not enter history. One request
 per session can run at a time. An image cannot be replaced inside a session.
 
 `DELETE /api/sessions/{session_id}` discards the image and conversation. Sessions

@@ -448,7 +448,8 @@
       const res = await API.chat({
         sessionId: state.sessionId,
         message,
-        contextText: state.text,
+        // The model already has the original reading; send only the user's edits.
+        contextText: state.report && state.text !== state.report.text ? state.text : "",
         language: replyLang(),
       }, chatController.signal);
       if (sequence !== chatSequence) return;

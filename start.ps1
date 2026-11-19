@@ -32,10 +32,14 @@ foreach ($cert in Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subj
 $distro = $env:LUMEN_WSL_DISTRO
 if (-not $distro) {
     $names = (wsl.exe --list --quiet) -replace "`0", "" | Where-Object { $_.Trim() } | ForEach-Object { $_.Trim() }
+    # A distribution without Docker writes errors; with "Stop" Windows PowerShell
+    # would treat them as fatal, so probe with errors ignored.
+    $ErrorActionPreference = "Continue"
     foreach ($name in $names) {
-        wsl.exe -d $name -- docker info *> $null
+        wsl.exe -d $name --exec docker info 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { $distro = $name; break }
     }
+    $ErrorActionPreference = "Stop"
 }
 if (-not $distro) {
     Write-Error ("No WSL distribution with a running Docker Engine was found. Install Docker " +
@@ -44,8 +48,20 @@ if (-not $distro) {
 
 # Pass these settings through to WSL when they are set in PowerShell.
 $env:WSLENV = (@($env:WSLENV, "LUMEN_MODEL_SIZE", "LUMEN_ACCELERATOR", "LUMEN_GPU_LAYERS",
-                 "LUMEN_CONTEXT", "LUMEN_TIMEOUT_SECONDS", "APP_PORT") |
+                 "LUMEN_CONTEXT", "LUMEN_TIMEOUT_SECONDS", "LUMEN_IMAGE_PIXELS", "APP_PORT") |
                Where-Object { $_ }) -join ":"
 Write-Host "Using Docker in WSL distribution '$distro'."
 wsl.exe -d $distro --cd $repo -- bash ./start.sh @args
-exit $LASTEXITCODE
+$code = $LASTEXITCODE
+if ($code -eq 0) {
+    # WSL shuts a distribution down shortly after its last wsl.exe command ends,
+    # which would stop Docker and Lumen with it. Keep one hidden, idle process
+    # running until .\stop.ps1 (or a reboot).
+    $alive = Get-CimInstance Win32_Process -Filter "Name = 'wsl.exe'" |
+        Where-Object { $_.CommandLine -like "*--exec sleep infinity*" }
+    if (-not $alive) {
+        Start-Process wsl.exe -WindowStyle Hidden -ArgumentList "-d $distro --exec sleep infinity"
+    }
+    Write-Host "Stop Lumen with .\stop.ps1"
+}
+exit $code

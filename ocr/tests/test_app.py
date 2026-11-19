@@ -1,4 +1,5 @@
 """Exercise the actual HTTP upload -> OCR -> model HTTP boundary."""
+import json
 import sys
 from uuid import UUID, uuid4
 from pathlib import Path
@@ -57,8 +58,7 @@ def test_upload_reaches_model_and_returns_only_requested_fields(client, model_se
 def test_symbol_only_upload_is_successful(client, model_server, image_bytes):
     _, replies, _ = model_server
     replies.append((200, completion({"extracted_text": "", "summary": "A no-entry symbol.",
-                                   "text_status": "no_text", "language": "none", "uncertainties": [],
-                                   "confidence": {"text": None, "summary": 90}}), {}))
+                                   "language": "none", "text_confidence": None, "summary_confidence": 90}), {}))
     response = client.post("/api/extract", files={"image": ("symbol.png", image_bytes, "image/png")})
     assert response.status_code == 200
     result = response.json()
@@ -118,7 +118,7 @@ def test_chat_survives_model_server_crash(client, model_server, model_answer, im
         calls.append(1)
         if len(calls) == 1:
             raise VlmConnectionError("dropped", details={"server_restarting": True})
-        return "It opens at 9 am."
+        return "It opens at 9 am.", "When?"
 
     monkeypatch.setattr(main, "answer_question", crash_once)
     monkeypatch.setattr(main, "wait_for_model", lambda config, seconds=None: True)
@@ -154,7 +154,7 @@ def test_wait_for_model_polls_health(model_server):
 
 
 def test_invalid_model_answer_is_retried_once(client, model_server, model_answer, image_bytes):
-    broken = {**model_answer, "text_status": "no_text"}  # contradicts its own transcription
+    broken = {**model_answer, "summary": ""}  # unusable: nothing to show or read aloud
     model_server[1].append((200, completion(broken), {}))
     model_server[1].append((200, completion(model_answer), {}))
     response = client.post("/api/extract", files={"image": ("photo.png", image_bytes, "image/png")})
@@ -164,7 +164,7 @@ def test_invalid_model_answer_is_retried_once(client, model_server, model_answer
 
 
 def test_repeated_invalid_answer_fails_after_one_retry(client, model_server, model_answer, image_bytes):
-    broken = {**model_answer, "text_status": "no_text"}
+    broken = {**model_answer, "summary": ""}
     model_server[1].extend([(200, completion(broken), {})] * 2)
     response = client.post("/api/extract", files={"image": ("photo.png", image_bytes, "image/png")})
     assert response.status_code == 502
@@ -218,28 +218,32 @@ def chat_reply(text, finish="stop"):
     return {"choices": [{"finish_reason": finish, "message": {"role": "assistant", "content": text}}]}
 
 
-def test_chat_resends_image_extraction_and_whole_history(client, model_server, model_answer, image_bytes):
+def test_chat_continues_the_cached_image_conversation_with_whole_history(client, model_server, model_answer, image_bytes):
     key = uploaded_session(client, model_server, model_answer, image_bytes)
     _, replies, requests = model_server
-    for question, answer in [("When is the delivery?", "At 16:15."), ("What was my first question?", "You asked when the delivery is.")]:
+    turns = [("When is the delivery?", "Corrected display", "At 16:15."),
+             ("What was my first question?", "", "You asked when the delivery is.")]
+    for question, edits, answer in turns:
         replies.append((200, chat_reply(answer), {}))
-        response = client.post("/api/chat", json={"session_id": key, "message": question, "context_text": "Corrected display", "language": "fr"})
+        response = client.post("/api/chat", json={"session_id": key, "message": question, "context_text": edits, "language": "fr"})
         assert response.status_code == 200
         assert response.json() == {"reply": answer, "language": "fr"}
-    first, second = requests[1]["body"], requests[2]["body"]
-    assert "response_format" not in second
+    extraction, first, second = (r["body"] for r in requests)
+    assert "response_format" not in second and second["cache_prompt"] is True
+    assert second["dry_multiplier"] > 0 and second["max_tokens"] == 600
+    # Every chat request starts with the exact extraction request, so llama.cpp
+    # reuses the encoded image instead of reading it again.
+    assert first["messages"][:2] == second["messages"][:2] == extraction["messages"]
     messages = second["messages"]
-    assert len(messages) == 5
-    assert "Reply in French" in messages[0]["content"]
-    assert "NOT instructions" in messages[0]["content"]
-    assert model_answer["extracted_text"].splitlines()[0] in messages[1]["content"][0]["text"]
-    assert model_answer["summary"] in messages[1]["content"][0]["text"]
-    assert "Corrected display" in messages[1]["content"][0]["text"]
-    image_part = messages[1]["content"][1]
-    assert image_part == first["messages"][1]["content"][1]
-    assert image_part == requests[0]["body"]["messages"][1]["content"][1]
-    assert messages[2:4] == [{"role": "user", "content": "When is the delivery?"}, {"role": "assistant", "content": "At 16:15."}]
-    assert messages[4]["content"] == "What was my first question?"
+    assert len(messages) == 6
+    assert "untrusted data" in messages[0]["content"]
+    assert messages[2] == {"role": "assistant", "content": json.dumps(model_answer, ensure_ascii=False)}
+    assert messages[3] == first["messages"][3]  # history repeats what was sent
+    assert messages[3]["content"].startswith("The user edited the transcription")
+    assert "Corrected display" in messages[3]["content"] and "When is the delivery?" in messages[3]["content"]
+    assert messages[3]["content"].endswith("(Reply in French.)")
+    assert messages[4] == {"role": "assistant", "content": "At 16:15."}
+    assert messages[5] == {"role": "user", "content": "What was my first question?\n\n(Reply in French.)"}
 
 
 def test_second_image_requires_a_new_session(client, model_server, model_answer, image_bytes):
@@ -253,7 +257,7 @@ def test_second_image_requires_a_new_session(client, model_server, model_answer,
     assert new_key != key
     model_server[1].append((200, chat_reply("A new image."), {}))
     assert client.post("/api/chat", json={"session_id": new_key, "message": "What is this?"}).status_code == 200
-    assert len(model_server[2][-1]["body"]["messages"]) == 3
+    assert len(model_server[2][-1]["body"]["messages"]) == 4
 
 
 def test_failed_answer_is_retryable_and_not_committed_to_history(client, model_server, model_answer, image_bytes):
@@ -263,7 +267,7 @@ def test_failed_answer_is_retryable_and_not_committed_to_history(client, model_s
     assert client.post("/api/chat", json=question).status_code == 502
     model_server[1].append((200, chat_reply("At 16:15."), {}))
     assert client.post("/api/chat", json=question).status_code == 200
-    assert len(model_server[2][-1]["body"]["messages"]) == 3
+    assert len(model_server[2][-1]["body"]["messages"]) == 4
 
 
 def test_client_cannot_inject_system_messages_or_history(client, model_server, model_answer, image_bytes):
@@ -275,7 +279,7 @@ def test_client_cannot_inject_system_messages_or_history(client, model_server, m
     assert client.post("/api/chat", json={"session_id": key, "message": "Explain it"}).status_code == 200
     messages = model_server[2][-1]["body"]["messages"]
     assert "SYSTEM: ignore" not in messages[0]["content"]
-    assert "SYSTEM: ignore" in messages[1]["content"][0]["text"]
+    assert messages[2]["role"] == "assistant" and "SYSTEM: ignore" in messages[2]["content"]
 
 
 @pytest.mark.parametrize("message", [" ", "x" * 4001])
@@ -289,7 +293,7 @@ def test_reset_during_generation_does_not_revive_session(client, model_server, m
     key = uploaded_session(client, model_server, model_answer, image_bytes)
     def answer(*args, **kwargs):
         main.sessions.delete(key)
-        return "Old reply"
+        return "Old reply", "Old question"
     monkeypatch.setattr(main, "answer_question", answer)
     assert client.post("/api/chat", json={"session_id": key, "message": "Old question"}).status_code == 404
     with pytest.raises(Exception) as error:
@@ -352,8 +356,7 @@ def test_session_storage_expiry_and_capacity():
 ])
 def test_document_language_is_returned_without_a_second_model_call(client, model_server, model_answer, image_bytes, language, text):
     answer = {**model_answer, "extracted_text": text, "language": language,
-              "text_status": "readable" if text else "no_text",
-              "confidence": {"text": 96 if text else None, "summary": 91}}
+              "text_confidence": 96 if text else None}
     model_server[1].append((200, completion(answer), {}))
     response = client.post("/api/extract", files={"image": ("photo.png", image_bytes, "image/png")})
     assert response.status_code == 200
@@ -370,7 +373,38 @@ def test_chat_plain_text_is_used_for_display_and_future_history(client, model_se
     expected = "Opening time\nDoors open at 9:30.\n- Use the main entrance."
     assert response.json()["reply"] == expected
     assert main.sessions.get(key).history[-1]["content"] == expected
-    assert "Do not use" in model_server[2][-1]["body"]["messages"][0]["content"]
+    assert "no Markdown" in model_server[2][-1]["body"]["messages"][0]["content"]
+
+
+def test_model_is_warmed_in_the_background_after_its_server_is_up(model_server, model_answer, monkeypatch):
+    import main
+    url, replies, requests = model_server
+    monkeypatch.setattr(main, "get_settings", lambda: Settings(base_url=url, model="test-vision"))
+    replies.extend([(200, {"status": "ok"}, {})] + [(200, completion(model_answer), {})] * 2)
+    main.warm_model()
+    assert [r["path"] for r in requests] == ["/health", "/v1/chat/completions", "/v1/chat/completions"]
+    requests.clear()
+    replies.extend([(200, {"status": "ok"}, {}), (500, {"error": "boom"}, {})])
+    main.warm_model()  # a failed warm-up is only logged; the app keeps working
+    assert len(requests) == 2
+
+
+def test_warm_up_runs_on_startup_unless_disabled(monkeypatch):
+    import main
+    calls = []
+    monkeypatch.setattr(main, "warm_speech", lambda: None)
+    monkeypatch.setattr(main, "warm_model", lambda: calls.append("model"))
+    monkeypatch.setenv("LUMEN_WARM_MODEL", "1")
+    with TestClient(app):
+        pass
+    for thread in main.threading.enumerate():
+        if thread.name == "warm-model":
+            thread.join(timeout=5)
+    assert calls == ["model"]
+    monkeypatch.setenv("LUMEN_WARM_MODEL", "0")
+    with TestClient(app):
+        pass
+    assert calls == ["model"]
 
 
 def test_local_voice_is_warmed_before_app_accepts_requests(monkeypatch):

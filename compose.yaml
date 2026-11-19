@@ -33,17 +33,26 @@ services:
       - --model
       - /models/qwen/Qwen3VL-${LUMEN_MODEL_SIZE:-2B}-Instruct-Q4_K_M.gguf
       - --mmproj
-      - /models/qwen/mmproj-Qwen3VL-${LUMEN_MODEL_SIZE:-2B}-Instruct-Q8_0.gguf
+      - /models/qwen/mmproj-Qwen3VL-${LUMEN_MODEL_SIZE:-2B}-Instruct-F16.gguf
       - --alias
       - lumen-local
       - --host
       - 0.0.0.0
       - --port
       - "8091"
+      # One image (~600 tokens) plus a conversation fits in 8k; a smaller
+      # context halves the memory reserved for it (900 MB instead of 1.8 GB).
       - --ctx-size
-      - ${LUMEN_CONTEXT:-16384}
+      - ${LUMEN_CONTEXT:-8192}
       - --parallel
       - "1"
+      # Keeps recent conversations (including their encoded image) in RAM, so a
+      # follow-up question does not read the image again. Bounded to 1 GB.
+      - --cache-ram
+      - "1024"
+      # Hard cap; the app already sends at most ~600 image tokens.
+      - --image-max-tokens
+      - "1024"
       - --jinja
       - --offline
       - --no-webui
@@ -72,6 +81,7 @@ services:
       SIGNSPEAK_VLM_BASE_URL: http://qwen:8091/v1
       SIGNSPEAK_VLM_MODEL: lumen-local
       SIGNSPEAK_VLM_TIMEOUT_SECONDS: ${LUMEN_TIMEOUT_SECONDS:-900}
+      SIGNSPEAK_VLM_MAX_IMAGE_PIXELS: ${LUMEN_IMAGE_PIXELS:-500000}
     ports:
       # Localhost only: microphone and local speech require a localhost origin.
       - "127.0.0.1:${APP_PORT:-8000}:8000"

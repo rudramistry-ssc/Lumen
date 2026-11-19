@@ -14,7 +14,7 @@ def test_one_image_returns_text_and_summary(model_server, model_answer, image_by
     assert len(requests) == 1
     assert result["text"] == model_answer["extracted_text"]
     assert result["summary"] == model_answer["summary"]
-    assert result["confidence"] == model_answer["confidence"]
+    assert result["confidence"] == {"text": 96, "summary": 91}
     assert result["validation"]["overall_status"] == "ok"
     assert render_report(result).startswith("Extracted text:\n")
 
@@ -22,8 +22,7 @@ def test_one_image_returns_text_and_summary(model_server, model_answer, image_by
 def test_symbol_only_image_returns_summary(model_server, image_bytes):
     url, replies, _ = model_server
     replies.append((200, completion({"extracted_text": "", "summary": "A left-pointing exit sign.",
-                                   "text_status": "no_text", "language": "none", "uncertainties": [],
-                                   "confidence": {"text": None, "summary": 90}}), {}))
+                                   "language": "none", "text_confidence": None, "summary_confidence": 90}), {}))
     result = analyze_image(image_bytes, vlm_config=VlmConfig(base_url=url))
     assert result["validation"]["overall_status"] == "ok"
     assert result["text"] == ""
@@ -32,12 +31,12 @@ def test_symbol_only_image_returns_summary(model_server, image_bytes):
 
 def test_unreadable_text_keeps_summary(model_server, image_bytes):
     url, replies, _ = model_server
-    replies.append((200, completion({"extracted_text": "", "summary": "A blurred notice.",
-                                   "text_status": "unreadable", "language": "none", "uncertainties": [],
-                                   "confidence": {"text": None, "summary": 40}}), {}))
+    replies.append((200, completion({"extracted_text": "[illegible]", "summary": "A blurred notice.",
+                                   "language": "none", "text_confidence": 20, "summary_confidence": 40}), {}))
     result = analyze_image(image_bytes, vlm_config=VlmConfig(base_url=url))
     assert result["validation"]["overall_status"] == "partial"
     assert result["summary"] == "A blurred notice."
+    assert result["text_status"] == "unreadable" and result["confidence"]["text"] is None
 
 
 def test_exif_orientation_before_model(model_server, model_answer):

@@ -12,6 +12,12 @@ in that same response. These are uncalibrated model self-assessments, not
 verified accuracy. No-text/unreadable results have `text: null`. Invalid or
 missing confidence fields are rejected by the image-analysis contract.
 
+Speed: the model answers with a small flat JSON object (`extracted_text`,
+`summary`, `language`, `text_confidence`, `summary_confidence`); `text_status` is
+derived from the text. Images are scaled to at most 0.5 MP (about 500 image
+tokens), and one system prompt serves both the image request and follow-up chat
+so the model server can reuse its cache.
+
 ## Python API
 
 ```python
@@ -26,7 +32,7 @@ VLM configuration comes from `SIGNSPEAK_VLM_BASE_URL`,
 `SIGNSPEAK_VLM_MODEL`, and `SIGNSPEAK_VLM_API_KEY`.
 Only the web app automatically reads the workspace `.env`.
 
-The existing VLM prompt and strict JSON validation are retained, along with
+Strict JSON validation is retained, along with
 EXIF orientation, aspect-preserving resizing, authentication, bounded transient
 retries and rejection of truncated output. Text remains in its original
 language. The summary defaults to English. Symbol-only images are supported.
@@ -46,15 +52,6 @@ Set model environment variables before using these commands. Batch testing runs
 the same pipeline once per image and writes `ocr/out.txt`. Optional
 `--json-dir ocr/results` saves diagnostics; the browser only receives text and summary.
 Use `--summary-language French` to change the CLI summary language.
-
-## Optional vLLM server
-
-Docker Compose serves the model with llama.cpp. `serve_vlm.py` remains available
-for launching the full-precision model with vLLM on a separate NVIDIA GPU server.
-Keep your existing working server configuration. For a new launch, supply
-`SIGNSPEAK_MODEL_PATH`, `SIGNSPEAK_VLM_MODEL` and `SIGNSPEAK_VLM_API_KEY`,
-then run `python ocr/serve_vlm.py` on the GPU node.
-The model is loaded once in the server, not once per uploaded image.
 
 No Tesseract, OpenCV or database dependency is required. The package's `chat.py`
 reuses the same model HTTP connection for image follow-ups. The web app's local

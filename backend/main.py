@@ -1,6 +1,7 @@
 """Image extraction, session chat and local speech; also serves the original UI."""
 import logging
 import os
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -17,12 +18,28 @@ from starlette.concurrency import run_in_threadpool
 from signspeak_ocr import analyze_image
 from signspeak_ocr.errors import ConfigError, VlmConnectionError, VlmResponseError
 from signspeak_ocr.chat import answer_question
+from signspeak_ocr.vlm import warm_up
 from config import get_settings
 from sessions import SessionStore
 from local_speech import speech_status, synthesize, transcribe, warm_speech
 
+def warm_model():
+    """Pre-load the vision model in the background once its server is up."""
+    config = get_settings().vlm_config()
+    if not wait_for_model(config, MODEL_START_WAIT_SECONDS, quiet=True):
+        return
+    started = time.monotonic()
+    try:
+        warm_up(config)
+        LOG.info("Vision model warmed up in %.0f s.", time.monotonic() - started)
+    except Exception as error:  # A cold first request is slower, not broken.
+        LOG.warning("Vision model warm-up skipped: %s", type(error).__name__)
+
+
 @asynccontextmanager
 async def lifespan(app):
+    if os.getenv("LUMEN_WARM_MODEL", "1") != "0":
+        threading.Thread(target=warm_model, name="warm-model", daemon=True).start()
     await run_in_threadpool(warm_speech)
     yield
 
@@ -31,6 +48,7 @@ app = FastAPI(title="Lumen image reader", lifespan=lifespan)
 LOG = logging.getLogger("uvicorn.error")
 # Long enough for the model container to restart llama-server on the CPU.
 MODEL_RESTART_WAIT_SECONDS = float(os.getenv("LUMEN_MODEL_RESTART_WAIT_SECONDS", "300"))
+MODEL_START_WAIT_SECONDS = 900
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 FRONTEND = Path(__file__).resolve().parents[1] / "frontend"
 sessions = SessionStore()
@@ -110,7 +128,7 @@ def model_restarting(result):
                for e in result["errors"])
 
 
-def wait_for_model(config, seconds=None):
+def wait_for_model(config, seconds=None, quiet=False):
     """After a model-server crash, wait until it serves again.
 
     The qwen container restarts llama-server itself and falls back to the CPU
@@ -120,7 +138,8 @@ def wait_for_model(config, seconds=None):
     url = config.base_url.rstrip("/").removesuffix("/v1") + "/health"
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     deadline = time.monotonic() + seconds
-    LOG.warning("The local model server dropped a request; waiting for it to restart.")
+    if not quiet:
+        LOG.warning("The local model server dropped a request; waiting for it to restart.")
     while time.monotonic() < deadline:
         try:
             with opener.open(url, timeout=5) as response:
@@ -135,15 +154,15 @@ def wait_for_model(config, seconds=None):
 async def process_image(data, session):
     try:
         config = get_settings().vlm_config()
-        # Keep the image exactly as sent to the model, for follow-up chat.
-        result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_image_url=True)
+        # Keep the conversation exactly as the model saw it, for follow-up chat.
+        result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
         if model_restarting(result) and await run_in_threadpool(wait_for_model, config):
-            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_image_url=True)
-        # Small local models occasionally return JSON that breaks the strict
-        # contract (e.g. a no_text result with a language). Retry once; the
-        # server reuses the cached image, so only generation time is repeated.
+            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
+        # A small local model occasionally returns an unusable answer (e.g. an
+        # empty summary). Retry once; the server reuses the cached image, so
+        # only generation time is repeated.
         if invalid_response(result):
-            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_image_url=True)
+            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
             invalid_response(result)
     except (ConfigError, ValidationError):
         raise HTTPException(503, "The model connection is not configured correctly.") from None
@@ -154,8 +173,7 @@ async def process_image(data, session):
         if "vlm_connection_failed" in codes:
             raise HTTPException(503, "Cannot reach the local model, or it took too long. Check the qwen container with: docker compose logs qwen")
         raise HTTPException(502, "The model could not process this image. Please try again.")
-    image_url = result.pop("image_url")
-    sessions.finish_upload(session, image_url, result)
+    sessions.finish_upload(session, result.pop("conversation"))
     return {"session_id": session.id, "text": result["text"], "summary": result["summary"],
             "language": result["language"],
             "summary_language": "fr" if config.summary_language.lower().startswith("fr") else "en",
@@ -170,21 +188,20 @@ async def chat(question: Question):
 
         def ask():
             return answer_question(
-                config, image_url=session.image_url,
-                text=session.text, summary=session.summary, uncertainties=session.uncertainties,
-                history=list(session.history), question=question.message,
-                language=question.language, edited_text=question.context_text,
+                config, conversation=session.conversation, history=list(session.history),
+                question=question.message, language=question.language,
+                edited_text=question.context_text,
             )
 
         try:
-            answer = await run_in_threadpool(ask)
+            answer, sent = await run_in_threadpool(ask)
         except VlmConnectionError as error:
             # History is only updated after success, so repeating is safe.
             if not (error.details.get("server_restarting")
                     and await run_in_threadpool(wait_for_model, config)):
                 raise
-            answer = await run_in_threadpool(ask)
-        sessions.finish_chat(session, question.message, answer)
+            answer, sent = await run_in_threadpool(ask)
+        sessions.finish_chat(session, sent, answer)
         return {"reply": answer, "language": question.language}
     except (ConfigError, ValidationError):
         raise HTTPException(503, "The model connection is not configured correctly.") from None

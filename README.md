@@ -7,8 +7,8 @@ It uses a GPU when one is usable (Intel Iris Xe / Arc, NVIDIA, AMD) and
 otherwise falls back to the CPU. After the first setup it works with no network.
 
 One photo → one Qwen3-VL request → extracted text, summary, detected language
-and text/summary confidence estimates. Follow-up chat re-sends the same image and
-the full conversation. Read aloud (Kokoro) and the microphone (faster-whisper)
+and text/summary confidence estimates. Follow-up chat continues that same
+conversation, so the model server reuses the image it already encoded. Read aloud (Kokoro) and the microphone (faster-whisper)
 run locally in the app container. Vision output and answers are unverified;
 check important information against the original image.
 
@@ -45,8 +45,17 @@ a slow network. Later starts take seconds to a minute.
 | `.\start.ps1` / `./start.sh` | detect GPU, download/verify models, start |
 | `... --offline` | restart with existing images/models, no network at all |
 | `... --cpu` | skip GPU detection |
+| `.\stop.ps1` | stop Lumen on Windows (models are kept) |
 | `docker compose logs -f qwen` | watch the vision model (GPU offload, timings) |
 | `docker compose down` | stop (models stay in the `models` volume) |
+
+On Windows, `start.ps1` leaves one hidden `wsl.exe` process running. Without it,
+WSL shuts the distribution down soon after the script ends and Lumen stops with
+it. `stop.ps1` stops the containers and that process.
+
+When the app starts, it sends the model one small image in each orientation in
+the background, so the first real photo is not slowed by loading the vision
+encoder or compiling GPU kernels (about 30–75 s after the model server is up).
 
 Do **not** run `docker compose down -v` unless you want to delete the models.
 
@@ -77,7 +86,8 @@ Set these in the shell before `start.ps1`/`start.sh` (they are remembered in `.e
 |---|---|---|
 | `LUMEN_MODEL_SIZE` | `2B` | `8B` = Qwen3-VL-8B (closer to the HPC results; ~5.8 GB, slower, needs ~11 GB of memory) |
 | `LUMEN_ACCELERATOR` | `auto` | see above |
-| `LUMEN_CONTEXT` | `16384` | model context (tokens) for the image, history and answer |
+| `LUMEN_CONTEXT` | `8192` | model context (tokens) for the image, history and answer |
+| `LUMEN_IMAGE_PIXELS` | `500000` | image size sent to the model; larger reads small print better but is slower (~3 s per extra 100k pixels on Iris Xe) |
 | `LUMEN_TIMEOUT_SECONDS` | `900` | longest wait for one model answer |
 | `LUMEN_GPU_LAYERS` | all | lower it if the GPU runs out of memory |
 | `APP_PORT` | `8000` | browser port (always bound to localhost only) |
@@ -89,37 +99,45 @@ run `wsl --shutdown`, then start again.
 ## What is the same as the HPC version, and what differs
 
 Unchanged: the frontend (only the landing-page lines that named vLLM/the HPC GPU
-node now say llama.cpp/local GPU), the image prompt and strict JSON contract,
-the confidence estimates, chat history handling, session limits, the Kokoro voice
+node now say llama.cpp/local GPU), the confidence estimates, session limits,
+the API seen by the browser, the Kokoro voice
 (70/30 `af_heart`/`af_bella` blend, `ff_siwis` for French, Misaki pronunciation,
 OpenVINO FP32 acceleration, clip caching) and faster-whisper speech input.
 
 Different: the model is a 4-bit GGUF of Qwen3-VL (2B by default, 8B optional)
-served by llama.cpp, instead of the full-precision 8B on vLLM. The 2B model is
-much faster but reads small or messy text less reliably and its confidence
-estimates are less meaningful. Local inference is slower than the HPC GPU,
-especially on a CPU.
+with an F16 vision projector, served by llama.cpp, instead of the full-precision
+8B on vLLM. The 2B model is much faster but reads small or messy text less
+reliably and its confidence estimates are less meaningful. To make it fast enough
+locally, the image request uses a shorter prompt and a small flat JSON answer
+(the unused uncertainty notes were dropped), photos are scaled to 0.5 MP, and
+llama.cpp's DRY sampler stops the repetition loops a small model can fall into.
+Chat questions continue the image conversation with one shared system prompt, so
+the cached image is reused instead of being sent through the model again.
 
 ## Performance on the development laptop
 
-Measured on an Intel Core i7-1265U (Iris Xe, 16 GB RAM) with Qwen3-VL-2B, CPU only:
+Measured end to end through the app API on an Intel Core i7-1265U (Iris Xe,
+16 GB RAM, on battery) with Qwen3-VL-2B on the Iris Xe GPU, nine demo photos,
+after the startup warm-up:
 
-| Step | Time |
-|---|---|
-| Large photo (~2,200 image tokens), complete extraction | ~4 min |
-| Small sample sign | 20 s – 1.5 min |
-| Follow-up chat answer (image reused from cache) | 15 s – 1.5 min |
-| Model start | ~1 min |
+| Step | Before | Now |
+|---|---|---|
+| Photo -> extracted text + summary | ~4 min (CPU) | 19-40 s, median 31 s |
+| Follow-up chat answer | 1-2 min | 2-14 s, mostly 2-8 s |
+| Model server start (GPU kernel compilation) | 1.5-4 min | ~2 min, then ~30-75 s background warm-up |
 
-Image reading dominates; answers are generated at ~6–7 tokens/s. A discrete
-NVIDIA/AMD GPU is much faster. The Iris Xe through WSL2 was only ~20% faster than
-the CPU in testing, took 1.5–4 min to start, and its driver occasionally crashed;
-the `qwen` container then restarts the model and, after a second crash, keeps
-serving on the CPU, while the app repeats the interrupted request. GPU tuning is
-still in progress.
+Where the time goes for a photo: reading the image is now ~10 s (about 500
+image tokens); generating the transcription and summary at ~10 tokens/s is the
+rest, so long notices take longest. On mains power the CPU and GPU run faster.
 
-Known limits of the 2B model: weaker reading of small or messy text, a
-bilingual sign was once reported as English only, and its confidence estimates
+The Iris Xe through WSL2 can still hit a driver error (`DEVICE_LOST`) after many
+requests; the `qwen` container then restarts the model and, after a second crash,
+keeps serving on the CPU (several times slower), while the app repeats the
+interrupted request. Restart the app (`.\stop.ps1`, then `.\start.ps1 --offline`)
+to go back to the GPU.
+
+Known limits of the 2B model: weaker reading of small, handwritten or messy text
+(e.g. it misreads the corrected delivery note), and its confidence estimates
 (e.g. 100/100) are not meaningful. The app retries once when the model's answer
 breaks the strict JSON contract. Use `LUMEN_MODEL_SIZE=8B` on machines with more
 memory for results closer to the HPC version.
@@ -162,7 +180,7 @@ python tests/live_pipeline.py          # real end-to-end check against the runni
 
 ## Files
 
-- `start.ps1`, `start.sh` – launchers with GPU detection and CPU fallback.
+- `start.ps1`, `start.sh` – launchers with GPU detection and CPU fallback; `stop.ps1` stops Lumen on Windows.
 - `compose.yaml`, `compose.gpu-*.yaml` – Docker services; one override per GPU type.
 - `backend/` – FastAPI app, sessions, local speech, `provision.py` (model setup), `Dockerfile`.
 - `frontend/` – the finalized UI.

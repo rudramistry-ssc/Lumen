@@ -2,6 +2,8 @@
 # WSL2 exposes the Windows GPU driver as /dev/dxg plus the user-mode libraries in
 # /usr/lib/wsl; Intel's Level Zero runtime in the image uses both (read-only).
 # start.sh selects this automatically when llama.cpp lists a SYCL device.
+# (A persistent SYCL kernel cache, SYCL_CACHE_PERSISTENT, was tested and made
+# llama-server crash during warm-up on Iris Xe, so kernels compile on each start.)
 services:
   qwen:
     # llama.cpp v1.0.0 (b12359) Intel SYCL server, pinned by digest.

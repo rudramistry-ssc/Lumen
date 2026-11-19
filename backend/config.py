@@ -18,10 +18,13 @@ class Settings(BaseSettings):
     api_key: str | None = None
     # Local CPU inference can take minutes for a large photo; GPUs are faster.
     timeout_seconds: float = 900.0
+    # Image size sent to the model; the main speed/detail trade-off.
+    max_image_pixels: int = 500_000
 
     def vlm_config(self) -> VlmConfig:
         return VlmConfig(base_url=self.base_url, model=self.model,
-                         api_key=self.api_key, timeout_seconds=self.timeout_seconds)
+                         api_key=self.api_key, timeout_seconds=self.timeout_seconds,
+                         max_image_pixels=self.max_image_pixels)
 
 
 @lru_cache

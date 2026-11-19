@@ -10,7 +10,7 @@ from PIL import Image
 from conftest import completion
 from signspeak_ocr import VlmConfig
 from signspeak_ocr.errors import ConfigError, VlmConnectionError, VlmResponseError
-from signspeak_ocr.vlm import analyze_with_vlm, check_vlm, encode_image, parse_analysis
+from signspeak_ocr.vlm import SYSTEM_PROMPT, analyze_with_vlm, check_vlm, encode_image, parse_analysis, warm_up
 
 
 def test_request_uses_configured_model_image_and_secret(model_server, model_answer):
@@ -53,39 +53,57 @@ def test_image_resize_preserves_ratio_and_pixel_budget():
 
 
 def test_fenced_json_and_unicode(model_answer):
-    assert parse_analysis("```json\n" + json.dumps(model_answer, ensure_ascii=False) + "\n```") == model_answer
+    assert parse_analysis("```json\n" + json.dumps(model_answer, ensure_ascii=False) + "\n```") == {
+        "extracted_text": "Livraison reportée\n16 h 15", "summary": model_answer["summary"],
+        "text_status": "readable", "language": "fr", "confidence": {"text": 96, "summary": 91}}
 
 
-@pytest.mark.parametrize("confidence", [
-    None, 95, {}, {"text": 95}, {"text": 95, "summary": 90, "extra": 1},
-    {"text": True, "summary": 90}, {"text": "95%", "summary": 90},
-    {"text": 0.95, "summary": 90}, {"text": -1, "summary": 90},
-    {"text": 101, "summary": 90}, {"text": 90, "summary": float("nan")},
-])
-def test_invalid_confidence_is_never_exposed_as_a_percentage(model_answer, confidence):
+@pytest.mark.parametrize("field", ["text_confidence", "summary_confidence"])
+@pytest.mark.parametrize("value", [True, "95%", 0.95, -1, 101, {}, {"text": 95}, float("nan")])
+def test_invalid_confidence_is_never_exposed_as_a_percentage(model_answer, field, value):
     with pytest.raises(VlmResponseError):
-        parse_analysis(json.dumps({**model_answer, "confidence": confidence}))
+        parse_analysis(json.dumps({**model_answer, field: value}))
 
 
 @pytest.mark.parametrize("text,summary", [(0, 100), (100, 0), (None, None)])
 def test_confidence_boundaries_and_unavailable_estimates(model_answer, text, summary):
-    answer = {**model_answer, "confidence": {"text": text, "summary": summary}}
-    assert parse_analysis(json.dumps(answer))["confidence"] == answer["confidence"]
+    answer = {**model_answer, "text_confidence": text, "summary_confidence": summary}
+    assert parse_analysis(json.dumps(answer))["confidence"] == {"text": text, "summary": summary}
 
 
-def test_unreadable_text_cannot_have_a_transcription_confidence(model_answer):
-    answer = {**model_answer, "text_status": "unreadable", "extracted_text": "", "language": "none"}
-    with pytest.raises(VlmResponseError):
-        parse_analysis(json.dumps(answer))
-    answer["confidence"]["text"] = None
-    assert parse_analysis(json.dumps(answer))["confidence"]["text"] is None
+@pytest.mark.parametrize("text", ["←\n\n→\n\n\n", " - • ", "→ ⚠"])
+def test_symbols_only_count_as_no_text(model_answer, text):
+    result = parse_analysis(json.dumps({**model_answer, "extracted_text": text}))
+    assert (result["text_status"], result["extracted_text"], result["language"]) == ("no_text", "", "none")
+    assert result["confidence"]["text"] is None
+
+
+@pytest.mark.parametrize("text", ["[illegible]", "[illegible] [occluded]\n…", " [ILLEGIBLE] - "])
+def test_unreadable_text_has_no_transcription_confidence(model_answer, text):
+    result = parse_analysis(json.dumps({**model_answer, "extracted_text": text}))
+    assert result["text_status"] == "unreadable"
+    assert result["confidence"] == {"text": None, "summary": 91}
+
+
+def test_contradictions_of_a_text_free_image_are_corrected_not_retried(model_answer):
+    # A small model sometimes gives a language and a text confidence with no
+    # text; rejecting that would cost a whole second model run.
+    result = parse_analysis(json.dumps({**model_answer, "extracted_text": "  \n"}))
+    assert result == {"extracted_text": "", "summary": model_answer["summary"], "text_status": "no_text",
+                      "language": "none", "confidence": {"text": None, "summary": 91}}
+
+
+def test_text_with_an_illegible_part_is_still_readable(model_answer):
+    result = parse_analysis(json.dumps({**model_answer, "extracted_text": "Closed [illegible] today"}))
+    assert result["text_status"] == "readable"
+    assert result["confidence"]["text"] == 96
 
 
 @pytest.mark.parametrize("update", [
-    {"summary": ""}, {"summary": 123}, {"uncertainties": "none"}, {"uncertainties": [1]},
-    {"text_status": "invented"}, {"text_status": "no_text"}, {"extracted_text": ""},
+    {"summary": ""}, {"summary": "  "}, {"summary": 123}, {"extracted_text": None},
+    {"uncertainties": []}, {"text_status": "readable"}, {"confidence": {"text": 1, "summary": 1}},
     {"extra": "not in the schema"},
-    {"language": "Spanish"}, {"language": ["en", "fr"]},
+    {"language": "Spanish"}, {"language": ["en", "fr"]}, {"language": None},
 ])
 def test_invalid_contract_is_rejected(model_answer, update):
     with pytest.raises(VlmResponseError):
@@ -98,12 +116,40 @@ def test_invalid_json_is_rejected(content):
         parse_analysis(content)
 
 
-def test_language_is_required_and_none_for_symbol_only(model_answer):
-    missing = {k: v for k, v in model_answer.items() if k != "language"}
+@pytest.mark.parametrize("field", ["extracted_text", "summary", "language", "text_confidence", "summary_confidence"])
+def test_every_field_is_required(model_answer, field):
     with pytest.raises(VlmResponseError):
-        parse_analysis(json.dumps(missing))
-    with pytest.raises(VlmResponseError):
-        parse_analysis(json.dumps({**model_answer, "extracted_text": "", "text_status": "no_text"}))
+        parse_analysis(json.dumps({k: v for k, v in model_answer.items() if k != field}))
+
+
+def test_request_is_cacheable_and_bounded(model_server, model_answer):
+    url, replies, requests = model_server
+    replies.append((200, completion(model_answer), {}))
+    result = analyze_with_vlm(Image.new("RGB", (4000, 3000)), VlmConfig(base_url=url), keep_conversation=True)
+    body = requests[0]["body"]
+    assert body["cache_prompt"] is True
+    assert body["max_tokens"] == 768
+    assert body["temperature"] == 0 and body["dry_multiplier"] > 0  # no greedy repetition loops
+    assert body["messages"][0]["content"] == SYSTEM_PROMPT
+    width, height = result["provenance"]["image_size_sent"]
+    assert width * height <= 500_000 and width / height == pytest.approx(4 / 3, rel=0.01)
+    # Chat repeats this exact turn so the server reuses the encoded image.
+    assert result["conversation"] == [body["messages"][1], {"role": "assistant", "content": json.dumps(model_answer, ensure_ascii=False)}]
+
+
+def test_warm_up_sends_one_small_image_per_orientation(model_server, model_answer):
+    url, replies, requests = model_server
+    replies.extend([(200, completion(model_answer), {})] * 2)
+    warm_up(VlmConfig(base_url=url))
+    assert len(requests) == 2
+    sizes = []
+    for request in requests:
+        body = request["body"]
+        assert body["max_tokens"] == 1 and body["messages"][0]["content"] == SYSTEM_PROMPT
+        encoded = body["messages"][1]["content"][1]["image_url"]["url"].split(",", 1)[1]
+        with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
+            sizes.append(image.size)
+    assert sizes[0] == sizes[1][::-1] and sizes[0][0] > sizes[0][1]
 
 
 def test_truncated_reply_is_not_success(model_server, model_answer):

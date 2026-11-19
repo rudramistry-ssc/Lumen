@@ -10,7 +10,7 @@ from .plain_text import plain_answer
 from .ingest import load_image
 from .vlm import analyze_with_vlm
 
-ANALYSIS_SCHEMA_VERSION = "signspeak-analysis-1.1"
+ANALYSIS_SCHEMA_VERSION = "signspeak-analysis-1.2"
 
 
 def analyze_image(
@@ -18,7 +18,7 @@ def analyze_image(
     *,
     vlm_config: VlmConfig | None = None,
     include_debug: bool = False,
-    keep_image_url: bool = False,
+    keep_conversation: bool = False,
 ) -> dict:
     config = vlm_config or VlmConfig()
     config.validate()
@@ -27,7 +27,7 @@ def analyze_image(
         "schema_version": ANALYSIS_SCHEMA_VERSION,
         "text": "", "summary": None, "text_status": "unknown", "language": "none",
         "confidence": {"text": None, "summary": None},
-        "uncertainties": [], "input": None, "errors": [],
+        "input": None, "errors": [],
         "validation": {"overall_status": "failed"},
     }
     stage = "ingest"
@@ -36,17 +36,17 @@ def analyze_image(
         result["input"] = loaded.metadata
         stage = "vlm"
         vision = analyze_with_vlm(loaded.working, config, include_debug=include_debug,
-                                  keep_image_url=keep_image_url)
-        if keep_image_url:
-            result["image_url"] = vision.pop("image_url")
+                                  keep_conversation=keep_conversation)
+        if keep_conversation:
+            result["conversation"] = vision.pop("conversation")
         summary = plain_answer(vision["summary"])
         if not summary:
             raise VlmResponseError("Model returned no readable image summary")
         result.update(text=vision["extracted_text"], summary=summary,
                       text_status=vision["text_status"], language=vision["language"],
-                      uncertainties=vision["uncertainties"], confidence=vision["confidence"])
+                      confidence=vision["confidence"])
         result["validation"]["overall_status"] = (
-            "partial" if vision["uncertainties"] or vision["text_status"] == "unreadable" else "ok"
+            "partial" if vision["text_status"] == "unreadable" else "ok"
         )
         if include_debug:
             result["model_response"] = vision

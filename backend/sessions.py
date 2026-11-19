@@ -1,4 +1,5 @@
 """Bounded, ephemeral sessions. Run one app worker; New session discards context."""
+import json
 from dataclasses import dataclass, field
 from threading import RLock
 from time import monotonic
@@ -14,10 +15,8 @@ class Session:
     touched: float = field(default_factory=monotonic)
     ready: bool = False
     busy: bool = True
-    image_url: str = ""
-    text: str = ""
-    summary: str = ""
-    uncertainties: list[str] = field(default_factory=list)
+    # The image turn exactly as the model saw it (image + its JSON answer).
+    conversation: list[dict] = field(default_factory=list)
     history: list[dict[str, str]] = field(default_factory=list)
 
 
@@ -55,16 +54,14 @@ class SessionStore:
             session.touched = monotonic()
             return session
 
-    def finish_upload(self, session: Session, image_url: str, result: dict):
+    def finish_upload(self, session: Session, conversation: list[dict]):
         with self._lock:
             if self.get(session.id) is not session:
                 raise HTTPException(404, "This session has ended.")
-            size = len(image_url)
+            size = len(json.dumps(conversation))
             if sum(s.size for s in self._sessions.values()) - session.size + size > self.max_bytes:
                 raise HTTPException(503, "Session storage is full. Try a smaller image.")
-            session.image_url, session.size = image_url, size
-            session.text, session.summary = result["text"], result["summary"]
-            session.uncertainties = result.get("uncertainties", [])
+            session.conversation, session.size = conversation, size
             session.ready, session.busy = True, False
 
     def begin_chat(self, key: str) -> Session:
