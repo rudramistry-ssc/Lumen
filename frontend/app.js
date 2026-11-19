@@ -167,7 +167,9 @@
     const stopStages = runStages();
     stopExtractStages = stopStages;
     try {
-      const res = await API.extract(file, state.sessionId, extractController.signal);
+      const res = await API.extract(file, state.sessionId, extractController.signal, (partial) => {
+        if (requestId === extractSequence) showPreview(partial);
+      });
       if (requestId !== extractSequence) { API.closeSession(res.session_id).catch(() => {}); return; }
       await stopStages();
       if (requestId !== extractSequence) return;
@@ -184,6 +186,7 @@
       state.ready = true;
       prepareSourceSpeech();
       $("extracted-text").value = state.text;
+      $("extracted-text").scrollTop = 0;  // the live preview had scrolled to its end
       $("lang-select").value = state.language;
       state.confidence = res.confidence?.method === "model_estimate" ? res.confidence : null;
       setExtractState("ready");
@@ -194,6 +197,7 @@
       console.error(err);
       state.file = null;
       stopStages(true);
+      $("extracted-text").value = "";  // never leave a partial reading behind
       setExtractState("empty");
       showExtractError(err.message || t("errExtract"));
     } finally {
@@ -205,8 +209,27 @@
     applyI18n();
   }
 
-  // Fake progress: real backend gives one response, so stages advance on a timer
-  // and all finish when the response arrives.
+  // Live reading: the text and summary appear while the model writes them, in the
+  // same layout as the final report. The box stays read-only until it is complete;
+  // an empty update (a retry) goes back to the progress steps.
+  function showPreview(partial) {
+    const box = $("extracted-text");
+    if (!partial || typeof partial.text !== "string") {
+      box.value = "";
+      box.hidden = true;
+      $("extract-loading").hidden = false;
+      return;
+    }
+    let text = `${t("reportText")}:\n${partial.text}`;
+    if (typeof partial.summary === "string") text += `\n\n${t("reportSummary")}:\n${partial.summary}`;
+    box.value = text;
+    box.hidden = false;
+    $("extract-loading").hidden = true;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // Progress steps until the first words arrive (or for the whole wait if the
+  // server sends one response): they advance on a timer and finish at the end.
   function runStages() {
     const items = [...document.querySelectorAll("#extract-loading li")];
     items.forEach((li) => (li.dataset.status = "todo"));
@@ -451,9 +474,15 @@
         // The model already has the original reading; send only the user's edits.
         contextText: state.report && state.text !== state.report.text ? state.text : "",
         language: replyLang(),
-      }, chatController.signal);
+      }, chatController.signal, (text) => {
+        // Show the answer while it is written; speech starts once it is complete.
+        if (sequence !== chatSequence) return;
+        pending.classList.toggle("is-live", Boolean(text));
+        pending.querySelector(".msg-body").textContent = text || t("thinking");
+        pending.scrollIntoView({ block: "end" });
+      });
       if (sequence !== chatSequence) return;
-      pending.classList.remove("is-pending");
+      pending.classList.remove("is-pending", "is-live");
       pending.querySelector(".msg-body").textContent = res.reply;
       pending.dataset.lang = res.language || replyLang();
       addSpeakButton(pending);
@@ -461,7 +490,7 @@
     } catch (err) {
       if (sequence !== chatSequence || err.name === "AbortError") return;
       console.error(err);
-      pending.classList.remove("is-pending");
+      pending.classList.remove("is-pending", "is-live");
       pending.classList.add("is-error");
       pending.querySelector(".msg-body").textContent = err.message || t("errChat");
       if (!input.value) input.value = message;

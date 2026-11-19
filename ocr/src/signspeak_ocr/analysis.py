@@ -19,7 +19,9 @@ def analyze_image(
     vlm_config: VlmConfig | None = None,
     include_debug: bool = False,
     keep_conversation: bool = False,
+    on_partial=None,
 ) -> dict:
+    """``on_partial(fields)`` receives the growing text/summary while generating."""
     config = vlm_config or VlmConfig()
     config.validate()
     started = time.perf_counter()
@@ -36,7 +38,7 @@ def analyze_image(
         result["input"] = loaded.metadata
         stage = "vlm"
         vision = analyze_with_vlm(loaded.working, config, include_debug=include_debug,
-                                  keep_conversation=keep_conversation)
+                                  keep_conversation=keep_conversation, on_partial=on_partial)
         if keep_conversation:
             result["conversation"] = vision.pop("conversation")
         summary = plain_answer(vision["summary"])

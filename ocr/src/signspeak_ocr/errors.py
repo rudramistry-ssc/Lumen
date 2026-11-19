@@ -33,3 +33,10 @@ class VlmConnectionError(OcrError):
 
 class VlmResponseError(OcrError):
     code = "vlm_invalid_response"
+
+
+class GenerationCancelled(Exception):
+    """The browser left (e.g. New session): stop reading so the model stops too.
+
+    Deliberately not an OcrError, so no caller mistakes it for a model failure.
+    """

@@ -51,6 +51,25 @@ Errors use `{"detail": "message"}`:
 - 503: local model container unavailable, too slow (timeout) or incorrectly configured.
 - 502: invalid, truncated or unsuccessful model response.
 
+### Live results (streaming)
+
+With `Accept: application/x-ndjson` (the UI always sends it), `/api/extract` and
+`/api/chat` answer with one JSON object per line while the model writes:
+
+```text
+{"partial": {"text": "AVIS AUX US"}}
+{"partial": {"text": "AVIS AUX USAGERS\nLa biblio…", "summary": "A notice"}}
+{"result": { …the response shown above… }}
+```
+
+`partial` holds the text (and, once started, the summary) decoded so far; it is
+display-only and not validated. `{"partial": {}}` means the server is retrying
+and the preview restarts. The last line is `{"result": …}` (for chat, the reply
+object itself) or `{"error": "message", "status": 503}` with the same messages
+and codes as below. Upload checks (413/415/422), 404 and 409 still return normal
+HTTP errors before streaming starts. If the browser disconnects (New session),
+the server closes its model request so llama.cpp stops generating at once.
+
 ## Follow-up conversation
 
 `POST /api/chat`, JSON:
@@ -64,7 +83,8 @@ Errors use `{"detail": "message"}`:
 }
 ```
 
-Response: `{"reply": "It opens at 9 am.", "language": "en"}`.
+Response: `{"reply": "It opens at 9 am.", "language": "en"}`. Streamed (see Live
+results), each `partial` is the plain-text answer so far, e.g. `{"partial": "It opens"}`.
 Replies use plain text; generated Markdown emphasis is removed before storing
 the completed turn. The model's display name is Lumen.
 

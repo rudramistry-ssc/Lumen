@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import re
+import sys
 import unicodedata
 from pathlib import Path
 from threading import Lock
@@ -158,14 +159,18 @@ def synthesize(text: str, language: str) -> bytes:
         import onnxruntime as ort
         from kokoro_onnx import Kokoro
         if _tts is None:
-            options = ort.SessionOptions()
-            options.intra_op_num_threads = min(2, os.cpu_count() or 2)
-            options.add_session_config_entry("session.intra_op.allow_spinning", "0")
-            session = ort.InferenceSession(str(MODELS / "kokoro/kokoro-v1.0.onnx"),
-                                           sess_options=options, providers=["CPUExecutionProvider"])
-            _tts = Kokoro.from_session(session, str(MODELS / "kokoro/voices-v1.0.bin"))
+            def original_session():
+                options = ort.SessionOptions()
+                options.intra_op_num_threads = min(2, os.cpu_count() or 2)
+                options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+                return ort.InferenceSession(str(MODELS / "kokoro/kokoro-v1.0.onnx"),
+                                            sess_options=options, providers=["CPUExecutionProvider"])
+
+            _tts = Kokoro.from_session(original_session(), str(MODELS / "kokoro/voices-v1.0.bin"))
             from speech_acceleration import accelerate
-            accelerate(_tts, MODELS / "kokoro/kokoro-v1.0.onnx")
+            # Once OpenVINO works, the ONNX Runtime copy (~370 MB) is released and
+            # only recreated if acceleration ever fails.
+            accelerate(_tts, MODELS / "kokoro/kokoro-v1.0.onnx", fallback=original_session)
         # Kokoro initializes the bundled eSpeak DLL/data first. Misaki then maps
         # pronunciations to the phoneme alphabet Kokoro was trained with.
         from misaki import en, espeak
@@ -243,3 +248,16 @@ def warm_speech():
         synthesize("Bonjour, je suis Lumen.", "fr")
     except HTTPException as error:
         logging.getLogger(__name__).warning("Local voice warm-up failed: %s", error.detail)
+    release_free_memory()
+
+
+def release_free_memory():
+    """Return memory freed while loading (e.g. the released ONNX Runtime copy of
+    the voice) to the system. glibc otherwise keeps it: measured ~310 MB."""
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):
+        pass

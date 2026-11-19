@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import completion
+from conftest import completion, streamed
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
@@ -414,3 +414,111 @@ def test_local_voice_is_warmed_before_app_accepts_requests(monkeypatch):
     with TestClient(app) as client:
         assert calls == ["ready"]
         assert client.get("/api/health").status_code == 200
+
+
+STREAM = {"Accept": "application/x-ndjson"}
+
+
+def events(response):
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/x-ndjson")
+    return [json.loads(line) for line in response.text.splitlines() if line.strip()]
+
+
+def test_streamed_upload_shows_text_while_reading_then_the_same_result(client, model_server, model_answer, image_bytes):
+    _, replies, requests = model_server
+    replies.append((200, streamed(model_answer), {}))
+    sent = events(client.post("/api/extract", headers=STREAM, files={"image": ("photo.png", image_bytes, "image/png")}))
+    partials = [event["partial"] for event in sent[:-1]]
+    assert len(partials) > 5 and all(set(p) <= {"text", "summary"} for p in partials)
+    assert partials[-1] == {"text": model_answer["extracted_text"], "summary": model_answer["summary"]}
+    result = sent[-1]["result"]
+    key = result.pop("session_id")
+    assert result == {"text": model_answer["extracted_text"], "summary": model_answer["summary"],
+                      "language": "fr", "summary_language": "en",
+                      "confidence": {"text": 96, "summary": 91, "method": "model_estimate"}}
+    assert requests[0]["body"]["stream"] is True
+    replies.append((200, chat_reply("At 16:15."), {}))
+    assert client.post("/api/chat", json={"session_id": key, "message": "When?"}).status_code == 200
+
+
+def test_streamed_upload_failure_is_an_event_and_frees_the_session(client, model_server, image_bytes):
+    import main
+    from fastapi import HTTPException
+    key = str(uuid4())
+    model_server[1].append((401, {"error": "private server detail"}, {}))
+    response = client.post("/api/extract", headers=STREAM, data={"session_id": key},
+                           files={"image": ("photo.png", image_bytes, "image/png")})
+    sent = events(response)
+    assert len(sent) == 1 and sent[0]["status"] == 503 and "docker compose logs qwen" in sent[0]["error"]
+    assert "private server detail" not in response.text
+    with pytest.raises(HTTPException):
+        main.sessions.get(key)
+
+
+def test_streamed_upload_rejects_bad_files_with_a_normal_status(client, model_server):
+    response = client.post("/api/extract", headers=STREAM, files={"image": ("notes.txt", b"text", "text/plain")})
+    assert response.status_code == 415
+    assert not model_server[2]
+
+
+def test_a_retried_stream_restarts_its_preview(client, model_server, model_answer, image_bytes):
+    model_server[1].extend([(200, streamed({**model_answer, "summary": ""}), {}), (200, streamed(model_answer), {})])
+    sent = events(client.post("/api/extract", headers=STREAM, files={"image": ("photo.png", image_bytes, "image/png")}))
+    assert {"partial": {}} in sent
+    assert sent[-1]["result"]["summary"] == model_answer["summary"]
+    assert len(model_server[2]) == 2
+
+
+def test_streamed_chat_shows_the_answer_while_it_is_written(client, model_server, model_answer, image_bytes):
+    import main
+    key = uploaded_session(client, model_server, model_answer, image_bytes)
+    model_server[1].append((200, streamed("**Doors** open at 9:30."), {}))
+    sent = events(client.post("/api/chat", headers=STREAM, json={"session_id": key, "message": "When?"}))
+    assert sent[-1] == {"reply": "Doors open at 9:30.", "language": "en"}
+    partials = [event["partial"] for event in sent[:-1]]
+    assert len(partials) > 3 and all("*" not in text for text in partials)
+    assert model_server[2][-1]["body"]["stream"] is True
+    assert main.sessions.get(key).history[-1] == {"role": "assistant", "content": "Doors open at 9:30."}
+    model_server[1].append((200, chat_reply("Yes."), {}))  # the session is free again
+    assert client.post("/api/chat", json={"session_id": key, "message": "Sure?"}).status_code == 200
+
+
+def test_streamed_chat_failure_is_an_event_and_keeps_history_clean(client, model_server, model_answer, image_bytes):
+    import main
+    key = uploaded_session(client, model_server, model_answer, image_bytes)
+    model_server[1].append((200, streamed("half an answ", finish_reason="length"), {}))
+    sent = events(client.post("/api/chat", headers=STREAM, json={"session_id": key, "message": "When?"}))
+    assert sent[-1] == {"error": "The model could not finish an answer. Please try again.", "status": 502}
+    assert main.sessions.get(key).history == []
+    model_server[1].append((200, chat_reply("At 16:15."), {}))
+    assert client.post("/api/chat", json={"session_id": key, "message": "When?"}).status_code == 200
+
+
+def test_closing_the_stream_cancels_the_generation():
+    import asyncio
+    import main
+    from signspeak_ocr.errors import GenerationCancelled
+
+    async def scenario():
+        resume, outcome = asyncio.Event(), {}
+
+        async def work(emit):
+            emit({"partial": "first words"})
+            await resume.wait()
+            try:
+                emit({"partial": "more words"})
+            except GenerationCancelled:
+                outcome["cancelled"] = True
+                raise
+
+        body = main.stream_events(work).body_iterator
+        first = await body.__anext__()
+        await body.aclose()  # the browser went away (e.g. New session)
+        resume.set()
+        await asyncio.sleep(0.05)
+        return first, outcome
+
+    first, outcome = asyncio.run(scenario())
+    assert json.loads(first) == {"partial": "first words"}
+    assert outcome == {"cancelled": True}

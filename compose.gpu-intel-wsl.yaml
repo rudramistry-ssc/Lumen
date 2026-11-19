@@ -2,15 +2,24 @@
 # WSL2 exposes the Windows GPU driver as /dev/dxg plus the user-mode libraries in
 # /usr/lib/wsl; Intel's Level Zero runtime in the image uses both (read-only).
 # start.sh selects this automatically when llama.cpp lists a SYCL device.
-# (A persistent SYCL kernel cache, SYCL_CACHE_PERSISTENT, was tested and made
-# llama-server crash during warm-up on Iris Xe, so kernels compile on each start.)
 services:
   qwen:
     # llama.cpp v1.0.0 (b12359) Intel SYCL server, pinned by digest.
     image: ghcr.io/ggml-org/llama.cpp@sha256:4fad818e2ccd0add09b5ede1f51b64ee8c86a9d5fc2c632dab545be3dbea204f
     environment:
       LLAMA_ARG_N_GPU_LAYERS: ${LUMEN_GPU_LAYERS:-999}
+      # llama.cpp's own flash-attention kernel instead of oneDNN's: ~20% faster
+      # text generation on Iris Xe at the app's context length, same prefill.
+      # (The SYCL docs also link the oneDNN path to DEVICE_LOST GPU resets.)
+      GGML_SYCL_FA_ONEDNN: "0"
     devices:
       - /dev/dxg:/dev/dxg
     volumes:
       - /usr/lib/wsl:/usr/lib/wsl:ro
+      # The Intel driver's own compiled-kernel cache: later starts take ~10 s
+      # instead of ~2 minutes. (SYCL_CACHE_PERSISTENT, a different cache, made
+      # llama-server crash during warm-up and is not used.)
+      - gpu-kernel-cache:/root/.cache/neo_compiler_cache
+
+volumes:
+  gpu-kernel-cache:

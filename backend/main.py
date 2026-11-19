@@ -1,4 +1,6 @@
 """Image extraction, session chat and local speech; also serves the original UI."""
+import asyncio
+import json
 import logging
 import os
 import threading
@@ -10,13 +12,14 @@ from contextlib import asynccontextmanager
 from typing import Literal
 from uuid import UUID
 
-from fastapi import FastAPI, Form, HTTPException, UploadFile, Response
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, Response
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from signspeak_ocr import analyze_image
-from signspeak_ocr.errors import ConfigError, VlmConnectionError, VlmResponseError
+from signspeak_ocr.errors import ConfigError, GenerationCancelled, VlmConnectionError, VlmResponseError
 from signspeak_ocr.chat import answer_question
 from signspeak_ocr.vlm import warm_up
 from config import get_settings
@@ -52,6 +55,56 @@ MODEL_START_WAIT_SECONDS = 900
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 FRONTEND = Path(__file__).resolve().parents[1] / "frontend"
 sessions = SessionStore()
+NDJSON = "application/x-ndjson"
+_streams = set()  # running streamed requests (keeps their tasks referenced)
+
+
+def wants_stream(request: Request) -> bool:
+    """The browser asks for live results; other clients get one JSON response."""
+    return NDJSON in request.headers.get("accept", "")
+
+
+def stream_events(work):
+    """Run ``work(emit)`` and send every emitted event as one NDJSON line.
+
+    The model's partial output reaches the browser while it is generated, so
+    text appears seconds after the image is read instead of at the very end.
+    ``emit`` may be called from worker threads. After the browser disconnects
+    (e.g. New session), the next ``emit`` raises GenerationCancelled; that closes
+    the model connection, so llama.cpp stops generating and is free at once.
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    gone = threading.Event()
+
+    def emit(event):
+        if gone.is_set():
+            raise GenerationCancelled()
+        loop.call_soon_threadsafe(queue.put_nowait, event)
+
+    async def run():
+        try:
+            await work(emit)
+        except GenerationCancelled:
+            pass
+        except Exception:
+            LOG.exception("A streamed request failed")
+            queue.put_nowait({"error": "Something went wrong. Please try again.", "status": 500})
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, None)
+
+    task = asyncio.create_task(run())
+    _streams.add(task)
+    task.add_done_callback(_streams.discard)
+
+    async def body():
+        try:
+            while (event := await queue.get()) is not None:
+                yield (json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8")
+        finally:
+            gone.set()
+
+    return StreamingResponse(body(), media_type=NDJSON, headers={"Cache-Control": "no-store"})
 
 
 @app.middleware("http")
@@ -91,7 +144,7 @@ def health():
 
 
 @app.post("/api/extract", response_model=Extraction)
-async def extract(image: UploadFile, session_id: UUID | None = Form(None)):
+async def extract(request: Request, image: UploadFile, session_id: UUID | None = Form(None)):
     try:
         data = await image.read(MAX_UPLOAD_BYTES + 1)
     finally:
@@ -104,6 +157,18 @@ async def extract(image: UploadFile, session_id: UUID | None = Form(None)):
         raise HTTPException(415, "Choose an image file.")
 
     session = sessions.reserve(str(session_id) if session_id else None, len(data))
+    if wants_stream(request):
+        async def work(emit):
+            try:
+                result = await process_image(data, session, lambda fields: emit({"partial": fields}))
+                emit({"result": result})
+            except HTTPException as error:
+                sessions.delete(session.id)
+                emit({"error": error.detail, "status": error.status_code})
+            except BaseException:
+                sessions.delete(session.id)
+                raise
+        return stream_events(work)
     try:
         return await process_image(data, session)
     except BaseException:
@@ -151,18 +216,28 @@ def wait_for_model(config, seconds=None, quiet=False):
     return False
 
 
-async def process_image(data, session):
+async def process_image(data, session, on_partial=None):
     try:
         config = get_settings().vlm_config()
-        # Keep the conversation exactly as the model saw it, for follow-up chat.
-        result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
+
+        def analyze():
+            # Keep the conversation exactly as the model saw it, for follow-up chat.
+            return analyze_image(data, vlm_config=config, keep_conversation=True, on_partial=on_partial)
+
+        def restart_preview():
+            if on_partial:
+                on_partial({})  # a retry starts its live preview from scratch
+
+        result = await run_in_threadpool(analyze)
         if model_restarting(result) and await run_in_threadpool(wait_for_model, config):
-            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
+            restart_preview()
+            result = await run_in_threadpool(analyze)
         # A small local model occasionally returns an unusable answer (e.g. an
         # empty summary). Retry once; the server reuses the cached image, so
         # only generation time is repeated.
         if invalid_response(result):
-            result = await run_in_threadpool(analyze_image, data, vlm_config=config, keep_conversation=True)
+            restart_preview()
+            result = await run_in_threadpool(analyze)
             invalid_response(result)
     except (ConfigError, ValidationError):
         raise HTTPException(503, "The model connection is not configured correctly.") from None
@@ -181,8 +256,24 @@ async def process_image(data, session):
 
 
 @app.post("/api/chat")
-async def chat(question: Question):
+async def chat(question: Question, request: Request):
     session = sessions.begin_chat(str(question.session_id))
+    if wants_stream(request):
+        async def work(emit):
+            try:
+                emit(await answer(question, session, lambda text: emit({"partial": text})))
+            except HTTPException as error:
+                emit({"error": error.detail, "status": error.status_code})
+            finally:
+                sessions.release_chat(session)
+        return stream_events(work)
+    try:
+        return await answer(question, session)
+    finally:
+        sessions.release_chat(session)
+
+
+async def answer(question: Question, session, on_text=None):
     try:
         config = get_settings().vlm_config()
 
@@ -190,19 +281,21 @@ async def chat(question: Question):
             return answer_question(
                 config, conversation=session.conversation, history=list(session.history),
                 question=question.message, language=question.language,
-                edited_text=question.context_text,
+                edited_text=question.context_text, on_text=on_text,
             )
 
         try:
-            answer, sent = await run_in_threadpool(ask)
+            reply, sent = await run_in_threadpool(ask)
         except VlmConnectionError as error:
             # History is only updated after success, so repeating is safe.
             if not (error.details.get("server_restarting")
                     and await run_in_threadpool(wait_for_model, config)):
                 raise
-            answer, sent = await run_in_threadpool(ask)
-        sessions.finish_chat(session, sent, answer)
-        return {"reply": answer, "language": question.language}
+            if on_text:
+                on_text("")  # the retry starts its live preview from scratch
+            reply, sent = await run_in_threadpool(ask)
+        sessions.finish_chat(session, sent, reply)
+        return {"reply": reply, "language": question.language}
     except (ConfigError, ValidationError):
         raise HTTPException(503, "The model connection is not configured correctly.") from None
     except VlmConnectionError as error:
@@ -213,8 +306,6 @@ async def chat(question: Question):
         raise HTTPException(502, "The model could not finish an answer. Please try again.") from None
     except ValueError as error:
         raise HTTPException(422, str(error)) from None
-    finally:
-        sessions.release_chat(session)
 
 
 @app.delete("/api/sessions/{session_id}", status_code=204)

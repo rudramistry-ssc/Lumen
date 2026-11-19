@@ -5,6 +5,8 @@ A question continues the image conversation exactly as the model saw it
 its cache of all of that and only reads the new question, instead of encoding
 the image and the document again for every answer.
 """
+from collections.abc import Callable
+
 from .config import VlmConfig
 from .errors import VlmResponseError
 from .plain_text import plain_answer
@@ -29,8 +31,11 @@ def question_message(question: str, language: str, edited_text: str = "") -> str
 
 
 def answer_question(config: VlmConfig, *, conversation: list[dict], history: list[dict],
-                    question: str, language: str, edited_text: str = "") -> tuple[str, str]:
-    """Return (plain-text answer, user message to store in history)."""
+                    question: str, language: str, edited_text: str = "",
+                    on_text: Callable[[str], None] | None = None) -> tuple[str, str]:
+    """Return (plain-text answer, user message to store in history).
+
+    ``on_text`` receives the answer as it grows (streamed request)."""
     config.validate()
     message = question_message(question, language, edited_text)
     # Preserve every completed turn. Never silently truncate conversation memory.
@@ -47,7 +52,7 @@ def answer_question(config: VlmConfig, *, conversation: list[dict], history: lis
         ],
         "temperature": 0.2, **ANTI_LOOP, "max_tokens": min(config.max_tokens, MAX_ANSWER_TOKENS),
         "stream": False, "cache_prompt": True,
-    })
+    }, on_text=(lambda content: on_text(plain_answer(content))) if on_text else None)
     try:
         choice = response["choices"][0]
         answer = choice["message"]["content"]

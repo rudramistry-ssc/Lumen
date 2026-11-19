@@ -36,6 +36,22 @@ def completion(answer, *, finish_reason="stop"):
             "usage": {"prompt_tokens": 20, "completion_tokens": 30}}
 
 
+class Streamed(list):
+    """A reply sent as a server-sent event stream, like llama.cpp with "stream": true."""
+
+
+def streamed(content, *, size=3, finish_reason="stop"):
+    """Stream ``content`` (a string, or an answer dict as JSON) a few characters at a time."""
+    if not isinstance(content, str):
+        content = json.dumps(content, ensure_ascii=False)
+    events = [{"choices": [{"index": 0, "delta": {"content": content[i:i + size]}, "finish_reason": None}]}
+              for i in range(0, len(content), size)]
+    if finish_reason:
+        events.append({"model": "test-vision", "choices": [{"index": 0, "delta": {}, "finish_reason": finish_reason}],
+                       "usage": {"prompt_tokens": 20, "completion_tokens": 30}})
+    return Streamed(events)
+
+
 @pytest.fixture
 def model_server():
     replies = deque()
@@ -47,9 +63,15 @@ def model_server():
             requests.append({"path": self.path, "authorization": self.headers.get("Authorization"),
                              "body": json.loads(body) if body else None})
             status, payload, headers = replies.popleft() if replies else (500, {"error": "no test reply"}, {})
-            data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            if isinstance(payload, Streamed):
+                data = "".join(f"data: {json.dumps(event, ensure_ascii=False)}\n\n" for event in payload)
+                data = (data + "data: [DONE]\n\n").encode("utf-8")
+                content_type = "text/event-stream"
+            else:
+                data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                content_type = "application/json"
             self.send_response(status)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(data)))
             for key, value in headers.items():
                 self.send_header(key, value)

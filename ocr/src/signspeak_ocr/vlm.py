@@ -9,6 +9,8 @@ import math
 import re
 import socket
 import time
+from collections.abc import Callable
+from http.client import HTTPException
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -83,12 +85,63 @@ def _reject_constant(value: str) -> None:
     raise ValueError(f"Non-finite JSON value: {value}")
 
 
-def _request_json(config: VlmConfig, endpoint: str, payload: dict | None = None) -> dict:
-    headers = {"Accept": "application/json"}
+def _read_json(response) -> dict:
+    raw = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(raw) > MAX_RESPONSE_BYTES:
+        raise VlmResponseError("VLM response exceeded the 8 MiB limit")
+    parsed = json.loads(raw.decode("utf-8"), parse_constant=_reject_constant)
+    if not isinstance(parsed, dict):
+        raise VlmResponseError("VLM server returned a non-object JSON response")
+    return parsed
+
+
+def _read_stream(response, on_text: Callable[[str], None]) -> dict:
+    """Read an OpenAI-style event stream, reporting the growing answer.
+
+    Returns the same shape as a non-streamed completion. If ``on_text`` raises
+    (the browser left), the connection is closed and llama.cpp stops generating.
+    """
+    content, finish, last, size = "", None, {}, 0
+    for raw in response:
+        size += len(raw)
+        if size > MAX_RESPONSE_BYTES:
+            raise VlmResponseError("VLM response exceeded the 8 MiB limit")
+        line = raw.strip()
+        if not line.startswith(b"data:"):
+            continue
+        data = line[5:].strip()
+        if data == b"[DONE]":
+            break
+        event = json.loads(data.decode("utf-8"), parse_constant=_reject_constant)
+        if not isinstance(event, dict) or "error" in event:
+            raise VlmResponseError("VLM server reported an error while generating")
+        choices = event.get("choices") or [{}]
+        choice = choices[0] if isinstance(choices[0], dict) else {}
+        delta = (choice.get("delta") or {}).get("content")
+        if isinstance(delta, str) and delta:
+            content += delta
+            on_text(content)
+        if choice.get("finish_reason"):
+            finish = choice["finish_reason"]
+        last = event
+    return {"model": last.get("model"), "usage": last.get("usage"),
+            "choices": [{"finish_reason": finish, "message": {"role": "assistant", "content": content}}]}
+
+
+def _request_json(config: VlmConfig, endpoint: str, payload: dict | None = None, *,
+                  on_text: Callable[[str], None] | None = None) -> dict:
+    """POST (or GET without payload) to the model server.
+
+    With ``on_text`` the answer is streamed and reported as it grows; the result
+    has the same shape either way.
+    """
+    headers = {"Accept": "text/event-stream" if on_text else "application/json"}
     if config.api_key:
         headers["Authorization"] = f"Bearer {config.api_key}"
     data = None
     if payload is not None:
+        if on_text:
+            payload = {**payload, "stream": True}
         headers["Content-Type"] = "application/json"
         data = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
     request = Request(config.base_url.rstrip("/") + endpoint, data=data, headers=headers)
@@ -96,13 +149,7 @@ def _request_json(config: VlmConfig, endpoint: str, payload: dict | None = None)
     for attempt in range(config.max_retries + 1):
         try:
             with opener.open(request, timeout=config.timeout_seconds) as response:
-                raw = response.read(MAX_RESPONSE_BYTES + 1)
-            if len(raw) > MAX_RESPONSE_BYTES:
-                raise VlmResponseError("VLM response exceeded the 8 MiB limit")
-            parsed = json.loads(raw.decode("utf-8"), parse_constant=_reject_constant)
-            if not isinstance(parsed, dict):
-                raise VlmResponseError("VLM server returned a non-object JSON response")
-            return parsed
+                return _read_stream(response, on_text) if on_text else _read_json(response)
         except HTTPError as error:
             status = error.code
             error.close()
@@ -119,7 +166,7 @@ def _request_json(config: VlmConfig, endpoint: str, payload: dict | None = None)
             # Server bodies may echo prompts, images, paths or credentials.
             raise VlmConnectionError(f"VLM server returned HTTP {status}. {hint}",
                                      details={"http_status": status}) from error
-        except (URLError, TimeoutError, socket.timeout, ConnectionError) as error:
+        except (URLError, TimeoutError, socket.timeout, ConnectionError, HTTPException) as error:
             # A timed-out generation may still be running: don't duplicate it.
             # A refused/dropped connection means the server stopped (e.g. a GPU
             # crash and restart), so the caller may safely retry once it is back.
@@ -201,7 +248,9 @@ def parse_analysis(content: str) -> dict[str, Any]:
         raise VlmResponseError("Model returned an empty image summary")
     if result["language"] not in LANGUAGES:
         raise VlmResponseError("Model returned an unknown document language")
-    text = result["extracted_text"]
+    # Blank lines a small model adds at the end or in long runs carry no
+    # content; they only produce silences when read aloud.
+    text = re.sub(r"\n[ \t]*(?:\n[ \t]*){2,}", "\n\n", result["extracted_text"]).strip()
     text_confidence = _confidence(result["text_confidence"], "text confidence")
     summary_confidence = _confidence(result["summary_confidence"], "summary confidence")
     language = result["language"]
@@ -217,6 +266,35 @@ def parse_analysis(content: str) -> dict[str, Any]:
         text_confidence = None  # no transcription to assess
     return {"extracted_text": text, "summary": result["summary"], "text_status": status,
             "language": language, "confidence": {"text": text_confidence, "summary": summary_confidence}}
+
+
+_PREVIEW_FIELDS = re.compile(r'"(extracted_text|summary)"\s*:\s*"')
+
+
+def partial_fields(content: str) -> dict[str, str]:
+    """The text and summary decoded so far from a half-written JSON answer.
+
+    Used only for the live preview; the final answer is validated normally. A
+    string is cut before an incomplete escape sequence, so it never shows a
+    stray backslash.
+    """
+    fields = {}
+    for match in _PREVIEW_FIELDS.finditer(content):
+        start = end = match.end()
+        while end < len(content) and content[end] != '"':
+            if content[end] == "\\":
+                step = 6 if content[end + 1:end + 2] == "u" else 2
+                if end + step > len(content):
+                    break  # escape sequence not complete yet
+                end += step
+            else:
+                end += 1
+        try:
+            value = json.loads('"' + content[start:end] + '"')
+        except ValueError:  # e.g. half of a surrogate pair; wait for the next token
+            continue
+        fields["text" if match.group(1) == "extracted_text" else "summary"] = value
+    return fields
 
 
 def image_prompt(config: VlmConfig) -> str:
@@ -243,7 +321,10 @@ def warm_up(config: VlmConfig) -> None:
 
 
 def analyze_with_vlm(image: Image.Image, config: VlmConfig, *, include_debug: bool = False,
-                     keep_conversation: bool = False) -> dict:
+                     keep_conversation: bool = False,
+                     on_partial: Callable[[dict[str, str]], None] | None = None) -> dict:
+    """Read one image. ``on_partial`` receives the text/summary while they are
+    generated (streamed request); without it a single response is awaited."""
     config.validate()
     started = time.perf_counter()
     image_url, sent_size = encode_image(image, config)
@@ -267,7 +348,18 @@ def analyze_with_vlm(image: Image.Image, config: VlmConfig, *, include_debug: bo
         }
     elif config.response_format == "json_object":
         payload["response_format"] = {"type": "json_object"}
-    response = _request_json(config, "/chat/completions", payload)
+    on_text = None
+    if on_partial:
+        shown: dict[str, str] = {}
+
+        def on_text(content: str) -> None:
+            fields = partial_fields(content)
+            if fields and fields != shown:
+                shown.clear()
+                shown.update(fields)
+                on_partial(dict(fields))
+
+    response = _request_json(config, "/chat/completions", payload, on_text=on_text)
     try:
         choice = response["choices"][0]
         finish = choice["finish_reason"]

@@ -64,6 +64,36 @@ def test_accelerator_failure_retries_original_engine_and_disables_acceleration()
     assert session.run(None, {"tokens": [3]}) == [[3]]
 
 
+def test_original_engine_is_only_created_if_acceleration_fails():
+    created = []
+
+    class Original:
+        def run(self, names, inputs):
+            return ["original"]
+
+    def factory():
+        created.append(1)
+        return Original()
+
+    class Working:
+        outputs = ["audio"]
+        def __call__(self, inputs):
+            return {"audio": np.zeros(2, np.float32)}
+
+    session = AcceleratedSession(Working(), factory)
+    session.run(None, {})
+    assert created == []  # ~370 MB of RAM not spent while acceleration works
+
+    class Broken:
+        def __call__(self, inputs):
+            raise RuntimeError("driver problem")
+
+    session = AcceleratedSession(Broken(), factory)
+    assert session.run(None, {}) == ["original"]
+    assert session.run(None, {}) == ["original"]
+    assert created == [1]  # created once, on first need
+
+
 def test_accelerator_returns_owned_output_buffers():
     class Compiled:
         outputs = ["audio"]

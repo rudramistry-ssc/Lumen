@@ -420,3 +420,126 @@ test('zero overall confidence remains a numeric zero rather than becoming unavai
   ui.upload(photo); await tick();
   assert.equal(ui.get('confidence').textContent, 'Confidence (est.): 0%');
 });
+
+// ---------- live results (streamed model output) ----------
+// A response like the server's: one JSON object per line, delivered in small
+// chunks that split lines and multi-byte characters.
+function liveResponse(lines, chunkSize = 7) {
+  const bytes = new TextEncoder().encode(lines.map(line => JSON.stringify(line) + '\n').join(''));
+  let offset = 0;
+  return {
+    ok: true,
+    headers: { get: name => (name.toLowerCase() === 'content-type' ? 'application/x-ndjson' : null) },
+    body: { getReader: () => ({ read: async () => {
+      if (offset >= bytes.length) return { done: true };
+      offset += chunkSize;
+      return { done: false, value: bytes.slice(offset - chunkSize, offset) };
+    } }) },
+  };
+}
+function liveApi(lines, requests = []) {
+  const window = { APP_CONFIG: { API_BASE_URL: '' } };
+  vm.runInNewContext(fs.readFileSync(path.join(source, 'api.js'), 'utf8'), {
+    window, FormData, TextDecoder,
+    fetch: async (url, options) => { requests.push({ url, options }); return liveResponse(lines); },
+  });
+  return window.API;
+}
+const plain = value => JSON.parse(JSON.stringify(value));
+
+test('API shows the reading while it is written and returns the final result', async () => {
+  const requests = [], seen = [];
+  const api = liveApi([
+    { partial: { text: 'Entrée' } },
+    { partial: { text: 'Entrée fermée', summary: 'A cl' } },
+    { result: { text: 'Entrée fermée', summary: 'A closed entrance.', language: 'fr', session_id: 's',
+                confidence: { text: 90, summary: 80, method: 'model_estimate' } } },
+  ], requests);
+  const result = await api.extract(new File(['x'], 'p.png', { type: 'image/png' }), 's', undefined, p => seen.push(p));
+  assert.equal(requests[0].options.headers.Accept, 'application/x-ndjson');
+  assert.deepEqual(plain(seen), [{ text: 'Entrée' }, { text: 'Entrée fermée', summary: 'A cl' }]);
+  assert.equal(result.summary, 'A closed entrance.');
+  assert.equal(result.language, 'fr');
+});
+
+test('API turns a streamed failure into an error with its status', async () => {
+  const api = liveApi([{ partial: { text: 'Av' } }, { error: 'Cannot reach the local model.', status: 503 }]);
+  await assert.rejects(api.extract(new File(['x'], 'p.png', { type: 'image/png' }), 's'),
+    error => error.message === 'Cannot reach the local model.' && error.status === 503);
+});
+
+test('API streams chat answers', async () => {
+  const seen = [];
+  const api = liveApi([{ partial: 'It op' }, { partial: 'It opens at 9 am.' }, { reply: 'It opens at 9 am.', language: 'en' }]);
+  const result = await api.chat({ sessionId: 's', message: 'When?', contextText: '', language: 'en' }, undefined, t => seen.push(t));
+  assert.deepEqual(seen, ['It op', 'It opens at 9 am.']);
+  assert.equal(result.reply, 'It opens at 9 am.');
+});
+
+test('the reading appears in the text box while the model writes it', async () => {
+  let progress, resolve;
+  const ui = page((file, session, signal, onProgress) => { progress = onProgress; return new Promise(done => { resolve = done; }); });
+  ui.upload(photo);
+  await tick();
+  assert.equal(ui.get('extracted-text').hidden, true, 'progress steps until the first words');
+  progress({ text: 'Avis' });
+  assert.equal(ui.get('extracted-text').hidden, false);
+  assert.equal(ui.get('extract-loading').hidden, true);
+  assert.equal(ui.get('extracted-text').value, 'Extracted text:\nAvis');
+  assert.equal(ui.get('extracted-text').disabled, true, 'read-only until complete');
+  assert.equal(ui.get('play-btn').disabled, true);
+  progress({ text: 'Avis\nEntrée fermée', summary: 'A closed' });
+  assert.equal(ui.get('extracted-text').value, 'Extracted text:\nAvis\nEntrée fermée\n\nSummary of the image:\nA closed');
+  progress({});  // the server retried: start over
+  assert.equal(ui.get('extracted-text').value, '');
+  assert.equal(ui.get('extract-loading').hidden, false);
+  resolve({ text: 'Avis\nEntrée fermée', summary: 'A closed entrance.' });
+  await tick();
+  assert.equal(ui.get('extracted-text').value, 'Extracted text:\nAvis\nEntrée fermée\n\nSummary of the image:\nA closed entrance.');
+  assert.equal(ui.get('extracted-text').disabled, false);
+  assert.equal(ui.get('play-btn').disabled, false);
+});
+
+test('a failed or abandoned reading never leaves partial text behind', async () => {
+  let progress, reject;
+  const ui = page((file, session, signal, onProgress) => {
+    progress = onProgress;
+    return new Promise((_, fail) => { reject = fail; });
+  });
+  ui.upload(photo);
+  await tick();
+  progress({ text: 'Half a sen' });
+  reject(new Error('The model could not process this image.'));
+  await tick();
+  assert.equal(ui.get('extracted-text').value, '');
+  assert.equal(ui.get('extract-card').dataset.state, 'empty');
+  ui.upload(photo);
+  await tick();
+  const late = progress;
+  ui.reset();
+  late({ text: 'Words from the old image' });
+  assert.equal(ui.get('extracted-text').value, '');
+});
+
+test('chat answers appear while they are written and get their speaker only when complete', async () => {
+  let progress, resolve;
+  const ui = page(async () => ({ text: 'Open 9 am', summary: 'Opening time' }), 'en', {
+    chat: (data, signal, onProgress) => { progress = onProgress; return new Promise(done => { resolve = done; }); },
+  });
+  ui.upload(photo);
+  await tick();
+  ui.send('When?');
+  await tick();
+  const bubble = ui.get('messages').children.at(-1);
+  progress('It opens');
+  assert.equal(bubble.querySelector('.msg-body').textContent, 'It opens');
+  progress('It opens at 9 am.');
+  assert.equal(bubble.querySelector('.msg-body').textContent, 'It opens at 9 am.');
+  assert.equal(ui.get('send-btn').disabled, true, 'still busy until the answer is complete');
+  assert(!bubble.children.some(child => child.className === 'msg-speak'));
+  resolve({ reply: 'It opens at 9 am.', language: 'en' });
+  await tick();
+  assert.equal(bubble.querySelector('.msg-body').textContent, 'It opens at 9 am.');
+  assert.equal(ui.get('send-btn').disabled, false);
+  assert(bubble.children.some(child => child.className === 'msg-speak'));
+});

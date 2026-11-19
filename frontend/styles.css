@@ -219,6 +219,8 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
 .msg-assistant .msg-who { text-transform: none; }
 .msg.is-pending .msg-body { color: var(--ink-4); font-family: var(--mono); font-size: 0.82rem; }
 .msg.is-pending .msg-body::after { content: "▋"; margin-left: 4px; color: var(--green); animation: blink .9s steps(2) infinite; }
+/* An answer being written: normal text, with the cursor still blinking at its end. */
+.msg.is-pending.is-live .msg-body { color: inherit; font-family: inherit; font-size: inherit; }
 .msg.is-error { border-color: var(--danger); background: var(--danger-deep); }
 .msg.is-error .msg-body { color: var(--danger); }
 .msg-speak {

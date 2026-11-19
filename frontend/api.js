@@ -8,6 +8,41 @@
     throw error;
   }
   const json = async (response) => (await checked(response)).json();
+  const LIVE = "application/x-ndjson";
+  // Live results: while the model writes, the server sends one JSON object per
+  // line ({"partial": ...}); the last line is the result or {"error", "status"}.
+  // A plain JSON response (no streaming) is accepted too.
+  async function live(response, onProgress) {
+    response = await checked(response);
+    const type = (response.headers && response.headers.get && response.headers.get("content-type")) || "";
+    if (!type.includes(LIVE) || !response.body) return response.json();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "", final = null;
+    const handle = (line) => {
+      if (!line.trim()) return;
+      const event = JSON.parse(line);
+      if (event.error !== undefined) {
+        const error = new Error(typeof event.error === "string" ? event.error : "The request failed. Please try again.");
+        error.status = event.status;
+        throw error;
+      }
+      if (event.partial !== undefined) { if (onProgress) onProgress(event.partial); }
+      else final = event.result !== undefined ? event.result : event;
+    };
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      for (let end = buffer.indexOf("\n"); end >= 0; end = buffer.indexOf("\n")) {
+        handle(buffer.slice(0, end));
+        buffer = buffer.slice(end + 1);
+      }
+    }
+    handle(buffer + decoder.decode());
+    if (!final) throw new Error("The connection closed before the result arrived. Please try again.");
+    return final;
+  }
   function localSpeechUrl(path) {
     const target = new URL(url(path), window.location.href);
     if (!["localhost", "127.0.0.1", "[::1]"].includes(target.hostname)) {
@@ -17,11 +52,14 @@
   }
   window.API = {
     async health() { return json(await fetch(url("/api/health"))); },
-    async extract(image, sessionId, signal) {
+    // onProgress({text, summary}) receives the reading while the model writes it.
+    async extract(image, sessionId, signal, onProgress) {
       const form = new FormData();
       form.append("image", image);
       form.append("session_id", sessionId);
-      const result = await json(await fetch(url("/api/extract"), { method: "POST", body: form, signal }));
+      const result = await live(await fetch(url("/api/extract"), {
+        method: "POST", body: form, signal, headers: { Accept: LIVE },
+      }), onProgress);
       if (typeof result.text !== "string" || typeof result.summary !== "string" || typeof result.session_id !== "string"
           || !["en", "fr", "mixed", "none"].includes(result.language)) {
         throw new Error("The server returned an incomplete result. Please try again.");
@@ -35,11 +73,12 @@
       }
       return result;
     },
-    async chat({ sessionId, message, contextText, language }, signal) {
-      const result = await json(await fetch(url("/api/chat"), {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal,
+    // onProgress(text) receives the answer while the model writes it.
+    async chat({ sessionId, message, contextText, language }, signal, onProgress) {
+      const result = await live(await fetch(url("/api/chat"), {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: LIVE }, signal,
         body: JSON.stringify({ session_id: sessionId, message, context_text: contextText, language }),
-      }));
+      }), onProgress);
       if (typeof result.reply !== "string" || !result.reply.trim()) throw new Error("The model returned an empty reply.");
       return result;
     },

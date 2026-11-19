@@ -8,3 +8,10 @@ services:
       LLAMA_ARG_N_GPU_LAYERS: ${LUMEN_GPU_LAYERS:-999}
     devices:
       - /dev/dri:/dev/dri
+    volumes:
+      # The Intel driver's compiled-kernel cache: later starts skip ~2 minutes
+      # of kernel compilation.
+      - gpu-kernel-cache:/root/.cache/neo_compiler_cache
+
+volumes:
+  gpu-kernel-cache:

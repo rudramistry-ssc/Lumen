@@ -7,10 +7,58 @@ from urllib.error import URLError
 import pytest
 from PIL import Image
 
-from conftest import completion
+from conftest import completion, streamed
 from signspeak_ocr import VlmConfig
-from signspeak_ocr.errors import ConfigError, VlmConnectionError, VlmResponseError
-from signspeak_ocr.vlm import SYSTEM_PROMPT, analyze_with_vlm, check_vlm, encode_image, parse_analysis, warm_up
+from signspeak_ocr.errors import ConfigError, GenerationCancelled, VlmConnectionError, VlmResponseError
+from signspeak_ocr.vlm import (SYSTEM_PROMPT, analyze_with_vlm, check_vlm, encode_image, parse_analysis,
+                               partial_fields, warm_up)
+
+
+def test_partial_fields_never_show_half_an_escape():
+    full = json.dumps({"extracted_text": 'Café "B12"\nÉté \\ 5 €', "summary": "Closed\tnow 😀",
+                       "language": "fr", "text_confidence": 90, "summary_confidence": 80}, ensure_ascii=True)
+    texts = []
+    for end in range(len(full) + 1):
+        fields = partial_fields(full[:end])  # every possible cut point
+        assert "\\" not in fields.get("summary", "")
+        texts.append(fields.get("text", ""))
+    assert all(a == b[:len(a)] for a, b in zip(texts, texts[1:]))  # only ever grows
+    assert partial_fields(full) == {"text": 'Café "B12"\nÉté \\ 5 €', "summary": "Closed\tnow 😀"}
+
+
+def test_streamed_analysis_reports_growing_text_and_ends_with_the_same_result(model_server, model_answer):
+    url, replies, requests = model_server
+    replies.append((200, completion(model_answer), {}))
+    replies.append((200, streamed(model_answer), {}))
+    config = VlmConfig(base_url=url)
+    whole = analyze_with_vlm(Image.new("RGB", (40, 30)), config, keep_conversation=True)
+    seen = []
+    live = analyze_with_vlm(Image.new("RGB", (40, 30)), config, keep_conversation=True, on_partial=seen.append)
+    assert requests[0]["body"]["stream"] is False and requests[1]["body"]["stream"] is True
+    assert len(seen) > 5 and seen[-1] == {"text": "Livraison reportée\n16 h 15", "summary": model_answer["summary"]}
+    assert all(a["text"] == b["text"][:len(a["text"])] for a, b in zip(seen, seen[1:]))
+    for key in ("extracted_text", "summary", "text_status", "language", "confidence", "conversation"):
+        assert live[key] == whole[key]
+
+
+def test_leaving_stops_reading_the_stream(model_server, model_answer):
+    url, replies, requests = model_server
+    replies.append((200, streamed(model_answer), {}))
+
+    def gone(_fields):
+        raise GenerationCancelled()
+
+    with pytest.raises(GenerationCancelled):
+        analyze_with_vlm(Image.new("RGB", (40, 30)), VlmConfig(base_url=url), on_partial=gone)
+    assert len(requests) == 1  # not mistaken for a failure and retried
+
+
+@pytest.mark.parametrize("finish", [None, "length"])
+def test_an_unfinished_stream_is_not_a_result(model_server, model_answer, finish):
+    url, replies, _ = model_server
+    replies.append((200, streamed(model_answer, finish_reason=finish), {}))
+    with pytest.raises(VlmResponseError):
+        analyze_with_vlm(Image.new("RGB", (40, 30)), VlmConfig(base_url=url), on_partial=lambda _: None)
 
 
 def test_request_uses_configured_model_image_and_secret(model_server, model_answer):
@@ -91,6 +139,12 @@ def test_contradictions_of_a_text_free_image_are_corrected_not_retried(model_ans
     result = parse_analysis(json.dumps({**model_answer, "extracted_text": "  \n"}))
     assert result == {"extracted_text": "", "summary": model_answer["summary"], "text_status": "no_text",
                       "language": "none", "confidence": {"text": None, "summary": 91}}
+
+
+def test_blank_line_runs_are_trimmed_but_line_breaks_kept(model_answer):
+    text = "\n no smoking\nno cycling\n\n\n\n  \nwear helmet\n\n\n\n\n"
+    result = parse_analysis(json.dumps({**model_answer, "extracted_text": text}))
+    assert result["extracted_text"] == "no smoking\nno cycling\n\nwear helmet"
 
 
 def test_text_with_an_illegible_part_is_still_readable(model_answer):

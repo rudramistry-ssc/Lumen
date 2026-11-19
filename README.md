@@ -56,6 +56,12 @@ it. `stop.ps1` stops the containers and that process.
 When the app starts, it sends the model one small image in each orientation in
 the background, so the first real photo is not slowed by loading the vision
 encoder or compiling GPU kernels (about 30–75 s after the model server is up).
+The Intel driver's compiled GPU kernels are kept in the `gpu-kernel-cache`
+volume, so only the very first start compiles them (~2 minutes).
+
+The extracted text and the summary appear in the text box while the model writes
+them, and chat answers appear word by word; read aloud starts once the text is
+complete. Pressing **New session** during a reading stops the model at once.
 
 Do **not** run `docker compose down -v` unless you want to delete the models.
 
@@ -112,23 +118,31 @@ locally, the image request uses a shorter prompt and a small flat JSON answer
 (the unused uncertainty notes were dropped), photos are scaled to 0.5 MP, and
 llama.cpp's DRY sampler stops the repetition loops a small model can fall into.
 Chat questions continue the image conversation with one shared system prompt, so
-the cached image is reused instead of being sent through the model again.
+the cached image is reused instead of being sent through the model again. Results
+are streamed to the browser while they are written. On the Iris Xe, llama.cpp's
+own flash-attention kernel (`GGML_SYCL_FA_ONEDNN=0`) generates text ~10-30%
+faster than the oneDNN one.
 
 ## Performance on the development laptop
 
-Measured end to end through the app API on an Intel Core i7-1265U (Iris Xe,
-16 GB RAM, on battery) with Qwen3-VL-2B on the Iris Xe GPU, nine demo photos,
-after the startup warm-up:
+Measured end to end through the app API (as the browser uses it) on an Intel
+Core i7-1265U (Iris Xe, 16 GB RAM) on mains power, Qwen3-VL-2B on the Iris Xe GPU,
+all ten demo photos, fresh model server, after the startup warm-up:
 
 | Step | Before | Now |
 |---|---|---|
-| Photo -> extracted text + summary | ~4 min (CPU) | 19-40 s, median 31 s |
-| Follow-up chat answer | 1-2 min | 2-14 s, mostly 2-8 s |
-| Model server start (GPU kernel compilation) | 1.5-4 min | ~2 min, then ~30-75 s background warm-up |
+| Photo: first words visible | ~4 min (nothing shown until done) | 10-13 s, median 11.5 s |
+| Photo: text + summary complete | ~4 min (CPU) | 18-36 s, median 29 s |
+| Chat: first words visible | 1-2 min | ~1 s |
+| Chat: answer complete | 1-2 min | 2-10 s, median 4 s |
+| Model server start | 1.5-4 min every time | ~2 min the first time, ~10 s later (kernel cache) |
+| App container memory | 1.6 GB | 1.1 GB |
 
-Where the time goes for a photo: reading the image is now ~10 s (about 500
-image tokens); generating the transcription and summary at ~10 tokens/s is the
-rest, so long notices take longest. On mains power the CPU and GPU run faster.
+Where the time goes for a photo: ~6 s vision encoder and ~3.5 s reading its
+~500 image tokens (then the text starts to appear), then writing at ~11 tokens/s,
+so long notices take longest. **On battery** the Windows "Balanced" plan throttles
+the Iris Xe hard: expect roughly half the speed (one run on battery: 4-9 tokens/s).
+Plug in, or choose "Best performance" in Windows power settings, for demos.
 
 The Iris Xe through WSL2 can still hit a driver error (`DEVICE_LOST`) after many
 requests; the `qwen` container then restarts the model and, after a second crash,

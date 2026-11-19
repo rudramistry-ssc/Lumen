@@ -31,6 +31,15 @@ the image again, so an answer costs only the new question and the reply.
 Successful answers are appended to server-owned history. A failed generation does not enter history. One request
 per session can run at a time. An image cannot be replaced inside a session.
 
+Both endpoints stream when the browser sends `Accept: application/x-ndjson`
+(`stream_events` in `main.py`): the model's output is requested with
+`"stream": true`, and the text, summary or answer written so far is forwarded as
+`{"partial": …}` lines, followed by the normal result or an `{"error", "status"}`
+line. The reading shows up a few seconds after the image is encoded instead of at
+the end. If the browser disconnects, the next update raises `GenerationCancelled`,
+which closes the model connection so llama.cpp stops generating. Other clients
+(CLI, tests) still get one JSON response.
+
 `DELETE /api/sessions/{session_id}` discards the image and conversation. Sessions
 are bounded, in memory and expire after one idle hour; use a single server worker.
 No database is needed. Resetting during generation cannot revive the old session.

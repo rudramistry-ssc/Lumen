@@ -89,9 +89,21 @@ def optimized_model(source):
 
 
 class AcceleratedSession:
+    """OpenVINO first; the original ONNX Runtime engine if that ever fails.
+
+    ``original`` is a session or, to save memory, a function that creates one:
+    an idle ONNX Runtime copy of the voice costs ~370 MB of RAM, and with working
+    acceleration it is never used.
+    """
+
     def __init__(self, compiled, original):
         self.compiled = compiled
         self.original = original
+
+    def _original(self):
+        if not hasattr(self.original, "run"):
+            self.original = self.original()  # created only when first needed
+        return self.original
 
     def run(self, names, inputs):
         if self.compiled is not None:
@@ -104,10 +116,12 @@ class AcceleratedSession:
             except Exception:
                 self.compiled = None
                 LOG.warning("Local voice acceleration failed; using the original CPU engine.")
-        return self.original.run(names, inputs)
+        return self._original().run(names, inputs)
 
 
-def accelerate(voice, source):
+def accelerate(voice, source, fallback=None):
+    """Run ``voice`` through OpenVINO. With ``fallback`` (a function creating the
+    original session), the original session is released once acceleration works."""
     if os.getenv("LUMEN_SPEECH_ACCELERATION", "auto").lower() == "off":
         return
     try:
@@ -118,7 +132,7 @@ def accelerate(voice, source):
             "INFERENCE_PRECISION_HINT": "f32",
             "INFERENCE_NUM_THREADS": min(4, os.cpu_count() or 2),
         })
-        voice.sess = AcceleratedSession(compiled, voice.sess)
+        voice.sess = AcceleratedSession(compiled, fallback or voice.sess)
         LOG.info("Local voice acceleration ready (FP32 CPU).")
     except Exception:
         LOG.warning("Local voice acceleration unavailable; using the original CPU engine.")
